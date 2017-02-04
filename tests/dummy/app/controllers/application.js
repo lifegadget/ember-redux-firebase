@@ -17,6 +17,9 @@ export default Ember.Controller.extend({
       this.get('firebase').ref('hello').once('value', (snapshot) => {
         console.log(snapshot.val());
       });
+    },
+    signOut() {
+      this.get('firebase').auth().signOut();
     }
   }
 });

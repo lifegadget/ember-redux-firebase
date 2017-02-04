@@ -161,6 +161,15 @@
     <p>
       You can see that using the configured username/password successfully authenticates whereas other combinations report back an error.
     </p>
+
+    <h6 class="row col-12">Logging Out</h6>
+    <p>
+      Logging a user out is straight-forward, in code it is just:
+    </p>
+    <pre class="row col-12"><code>  firebase.auth().signOut();</code></pre>
+    <p>
+      You can press the button to execute that here: {{ui-button 'sign out' onClick=(action 'signOut')}}
+    </p>
   </div>
 
   <div class="row downer">
@@ -206,6 +215,17 @@
     <pre><code>  firebase.watch('/users', 'USER_PROFILE')</code></pre>
     <p>
       Where the above would dispatch events of type USER_PROFILE_ADDED, USER_PROFILE_CHANGED, USER_PROFILE_REMOVED.
+    </p>
+  </div>
+
+  <div class="row">
+    <h4>Current User Profile</h4>
+    <p>
+      A very common requirement for an application is to have the logged in user's profile available (and kept up-to-date when changed) as a handy reference to application code. The Firebase Auth system has a limited user profile that it defines and if that's all you need there is nothing else needed as this will be returned as part of both the AUTH_SUCCESS and CURRENT_USER_CHANGED actions. Many applications though have their own user profiles which structurally fit into the limited properties that Firebase allows. In order to provide easy access to this richer user profile data you may opt-in with:
+    </p>
+    <pre class=><code>  firebase.currentUserProfile(path)</code></pre>
+    <p>
+      The {{tag 'path'}} parameter indicates the path in the Firebase DB where the list of User Profiles reside. It also assumes that the User Profiles are keyed by 'uid' (which is what the Authentiation system uses). If you leave the path parameter blank then it will default to "/users". Once enabled, the CURRENT_USER_CHANGED action will also include "profile" property off of the "user" property which will contain the broader user profile.
     </p>
   </div>
 

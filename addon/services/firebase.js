@@ -10,9 +10,13 @@ let app;
  * start listening for Auth State changes and dispatch
  * events when they occur
  */
-function onAuthStateChanged(dispatch) {
+function onAuthStateChanged(context) {
+  const dispatch = context.get('redux.dispatch');
   app.auth().onAuthStateChanged(
-    (currentUser) => dispatch({type: 'CURRENT_USER_CHANGED', currentUser}),
+    (user) => {
+      dispatch({type: 'CURRENT_USER_CHANGED', user});
+      context.set('isAuthenticated', user ? true : false);
+    },
     (e) => dispatch({type: 'ERROR_DISPATCHING', message: e.message}));
 }
 
@@ -35,6 +39,7 @@ function onConnectedChanged(dispatch, url) {
 
 const fb = Ember.Service.extend({
   redux: service(),
+  _currentUserProfile: false,
 
   init() {
     const {redux} = this.getProperties('redux');
@@ -49,7 +54,7 @@ const fb = Ember.Service.extend({
     debug(`Connected to Firebase DB: ${config.firebase.databaseURL}`);
     const modulePrefix = get(config, 'modulePrefix');
     app = window.firebase.initializeApp(config.firebase, modulePrefix || DEFAULT_NAME);
-    onAuthStateChanged(redux.dispatch);
+    onAuthStateChanged(this);
     onConnectedChanged(redux.dispatch, config.firebase.databaseURL);
   },
 
@@ -68,6 +73,15 @@ const fb = Ember.Service.extend({
   unwatch() {
     return unwatch(app);
   },
+
+  currentUserProfile(path) {
+    if (!path && path === false) {
+      this._currentUserProfile = '/users';
+    } else {
+      this._currentUserProfile = path;
+    }
+  },
+  isAuthenticated: false
 
 });
 
