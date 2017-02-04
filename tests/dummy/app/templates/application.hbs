@@ -1,5 +1,214 @@
-{{!-- The following component displays Ember's default welcome message. --}}
-{{welcome-page}}
-{{!-- Feel free to remove this! --}}
+<div class="container">
+  <div class="row">
+    <h1>ember-redux-firebase</h1>
+  </div>
+
+  <div class="row byline">
+    An Ember addon which provides a Firebase API surface for
+    the &nbsp; <code>ember-redux-core</code> &nbsp; addon
+  </div>
+
+  <h2 class="row downer">API Surface</h2>
+  <div class="row downer">
+    <ul>
+      <li>
+        <code>auth</code> 
+        <br>
+        Authorization against the various methods that Firebase provides, including:
+        <ul>
+          <li>Google</li>
+          <li>Facebook</li>
+          <li>Twitter</li>
+          <li>Github</li>
+          <li>Email and Password</li>
+          <li>Anonymous</li>
+        </ul>
+      </li>
+      <li>
+        <code>ref</code>
+        <br>
+        Get a reference to a path in the database.
+      </li>
+      <li>
+        <code>watch</code>
+        <br>
+        Setup watching on a path in the database which will trigger an redux action dispatch
+        whenever 
+      </li>
+      <li>
+        <code>unwatch</code>
+        <br>
+        Remove a previously setup <i>watch</i> to free up system resources
+      </li>
+    </ul>
+  </div>
+
+  <h2 class="row downer">USAGE</h2>
+  <div class="row downer">
+
+    <h4>Configuration</h4>
+    <p>
+      By installing this addon you gain access to the {{tag 'firebase' mood='success'}} service. In order for this service to correctly connect to your database you'll need to configure it in your <i>environment.js</i>. You can get the specific configuration by navigating to the Firebase console and choosing "Overview > Add Firebase to your web app". The configuration will looks something like:
+    </p>
+    <p>
+<pre><code>  module.exports = function(environment) {
+  var ENV = {
+    firebase: {
+      apiKey: "AIzaRyBJANsBXIIrIMF1w1VLwfm7DrD_TV2J2I4",
+      authDomain: "ember-redux-firebase.firebaseapp.com",
+      databaseURL: "https://ember-redux-firebase.firebaseio.com"
+    },
+</code></pre>
+    </p>
+  </div>
+  <div class="row downer">
+    <h4>Connection</h4>
+    <p>
+      Since Ember services load lazily, you will not have actually connected to the database yet but as soon as the service is loaded you'll see the dispatch of the following actions:
+    </p>
+    <ul>
+      <li>FIREBASE_CONNECT</li>
+      <li>FIREBASE_DISCONNECT</li>
+    </ul>
+  </div>
+  <div class="row">
+    <p class="col-9">
+      By pressing the button to the right you will load the service. Try pressing this while having the Redux Inspector up.
+    </p>
+    <p class="col">
+      {{ui-button 'load service' onClick=(action 'loadService')}}
+    </p>
+    <p>
+      It may seem odd at first that you got <i>both</i> the DISCONNECTED and the CONNECTED event to start but this will make more sense when you realise that what is happening is we are setting up a real-time event that will detect all current and future changes in connection state. This helps us to understand when the client is offline (due to network failure, etc.) and when we've come back online.
+    </p>
+  </div>
+
+  <div class="row">
+    <h4>References</h4>
+    <p>
+      Once connected the {{tag 'ref'}} method of the service gives you a "reference" to the database at any given part of the state tree. In this demo let's retrieve <i>hello</i> path from the database:
+    </p>
+<pre class="col-6"><code>
+    firebase.ref('hello').once('value', (snapshot) => {
+      console.log(snapshot.val());
+    });
+</code></pre>
+    <p class="col-6">
+      <p>&nbsp;</p>
+      {{ui-button 'execute' onClick=(action 'referenceCheck')}}
+      <br>
+      <i>check console for output</i>
+    </p>
+    <p>
+      You can look at the demo database yourself (defined in this repo's <i>database-rules.json</i>) and see that the rules allow for any and everyone to access the "hello" path. Ok, we're connected. Feels good but now let's get authenticated.
+    </p>
+
+    <h4>Authentication</h4>
+    <p>
+      A really nice feature of Firebase is its ability to authenticate users without the need for huge amounts of code. So in one way, the firebase <i>service</i> being provided in this addon is simply proxing the Firebase API along to the user. However, this addon's primary function is to integrate a Firebase database access with the Redux state management solution so when using the various authentication methods this addon will <i>dispatch</i> one or more of the following actions:
+      </p>
+      <p>
+      <ul>
+        <li>AUTH_REQUEST { provider }</li>
+        <li>AUTH_SUCCESS { provider, user }</li>
+        <li>AUTH_FAILURE { provider, message }</li>
+        <li>CURRENT_USER_CHANGED { uid, profile }</li>
+      </ul>
+      The Firebase's API exposed by proxying Firebase's {{tag 'firebase.auth()'}} API. By using the service provided here -- versus the Firebase API directly -- you get the same interaction with the database but you also get the appropriate actions dispatched to redux which allows your application's reducers to appropriately shape the state tree.
+    </p>
+    <p>
+      So let's walk through an example. Using the form below we'll allow you to login with a username/password combination. 
+    </p>
+    <div class="col-6">
+      <div class="row">
+        <div class="col-2">
+          Username:
+        </div>
+        <div class="col-6">
+          {{text-input
+            username
+            placeholder: 'username'
+            onChange=(mut username)
+          }}
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-2"> 
+          Password:
+        </div>
+        <div class="col">
+          {{password-input
+            password
+            placeholder: 'password'
+            onChange=(mut password)
+          }}
+        </div>
+      </div>
+      <div class="row">
+        {{ui-button 'login' onClick=(action 'login' username password)}}
+      </div>
+    </div>
+    <div class="col">
+      <ul>
+        <li>email: person@email.com</li>
+        <li>password: firebase</li>
+      </ul>
+    </div>
+
+
+  </div>
+  <div class="row downer">
+    <p>
+      You can see that using the configured username/password successfully authenticates whereas other combinations report back an error.
+    </p>
+  </div>
+
+  <div class="row downer">
+    <h4>Watching</h4>
+    <p>
+      One of the nicest aspects of a real-time database life Firebase is that you can specify a path in the database that you will watch for updates. When an update comes you will be immediately notified of the change. 
+    </p>
+    <h6>Types of Listeners</h6>
+    <p>
+      The most common way to listen for change is using a "value listener" which will give you the full tree at the reference's path whenever there is a change in the tree. You could create this manually with the following code:
+    </p>
+    <pre><code>  firebase.ref('users').on('value', snapshot => {...})</code></pre>
+    <p>
+      In fact, this kind of code is very common when you look for examples of Firebase queries on the web. And while this kind of listener strategy is very effective for small amounts of data (typically a node rather than a list of nodes). When you start to have larger sets of data then you'll want to employ child listeners which return only the child nodes which have <i>changed</i> rather than the full list of nodes. To do this case you'll need separate listeners for <i>create</i>, <i>update</i>, and <i>remove</i> events. 
+    </p>
+    <p>
+      <b>Note:</b> if you're familiar with the <i>emberfire</i> addon, it provides real-time functions by adding a "value listener" on any model where you call the {{pill 'findAll()'}} method. This is good <i>shorthand</i> but -- as stated above -- becomes quite inefficient for large lists.
+    </p>
+    <h6 class="downer">Watch API</h6>
+    <p>
+      In both cases (node and list), however, this API provides a convenient way to perform either strategy and plug into the Redux state management:
+    </p>
+    <ul>
+      <li>{{tag 'firebase.watch().list(ref, actionCreator)'}}, Δ calls <i>actionCreater</i> with (operation)(id, data)</li>
+      <li>{{tag 'firebase.watch().node(ref, actionCreator)'}}, Δ calls <i>actionCreater</i> with (data)</li>
+    </ul>
+    <p>
+      Both endpoints provide a declaritive way to call a passed in "action-creator" every time a change takes place. For instance, if you wanted to monitor a list of users for changes you would state the following in your code:
+    </p>
+    <pre><code>  const ac = (op)(id, data) => {...};
+  firebase.watch('/users', ac);</code></pre>
+    <p>
+      whereas if you just wanted to monitor changes to a specific user's profile you would state:
+    </p>
+    <pre><code>  const ac = (data) => {...};
+  firebase.watch('/users/1234', ac);</code></pre>
+    <p>
+      <b>Note:</b> the "ref" parameter can either be a string path in the DB (as the example above shows) or an actual Firebase "ref" object. This second form allows for more advanced queries to be watched.
+    </p>
+    <p>
+      <b>Note:</b> the "ac" parameter can either be an action creator <i>function</i> (as illustrated above) or just the name of the action type to be emitted. In this latter case you might have something like:
+    </p>
+    <pre><code>  firebase.watch('/users', 'USER_PROFILE')</code></pre>
+    <p>
+      Where the above would dispatch events of type USER_PROFILE_ADDED, USER_PROFILE_CHANGED, USER_PROFILE_REMOVED.
+    </p>
+  </div>
+
+</div>
 
 {{outlet}}

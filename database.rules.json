@@ -1,0 +1,13 @@
+{
+  "rules": {
+    ".read": "auth != null",
+    ".write": "auth != null",
+    "hello": {
+      ".read": true
+    },
+    "lockdown": {
+      ".read": "auth != null",
+      ".write": false
+    }
+  }
+}
