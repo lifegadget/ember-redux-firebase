@@ -212,25 +212,28 @@ firebase.ref('hello').once('value', (snapshot) => {
     </p>
     <h6 class="downer">Watch API</h6>
     <p>
-      In both cases (node and list), however, this API provides a convenient way to perform either strategy and plug into the Redux state management:
+      In both cases (node and list), however, this API provides a declaritive way to perform either strategy and plug into the Redux state management:
     </p>
     <ul>
-      <li>{{tag 'firebase.watch().list(ref, actionCreator)'}}, Δ calls <i>actionCreater</i> with (operation)(id, data)</li>
-      <li>{{tag 'firebase.watch().node(ref, actionCreator)'}}, Δ calls <i>actionCreater</i> with (data)</li>
+      <li>
+        <b>Node</b>
+        <pre><code>firebase.watch().node('/users/1234', 'USER_PROFILE', options);</code></pre>
+        <p>
+          This will setup a "value" listener on the leaf node and send a {{pill 'USER_PROFILE_UPDATED'}} action every time there is an update to the user profile.
+        </p>
+      </li>
+      <li>
+        <b>List</b>
+        <pre><code>firebase.watch().list('/users', 'USER', options);</code></pre>
+        <p>
+          This will setup "child_added", "child_removed", and "child_updated" events that will send appropriately named actions (e.g., {{pill 'USER_ADDED'}}, etc.) when the list located at '/users' changes. 
+        </p>
+      </li>
     </ul>
     <p>
-      Both endpoints provide a declaritive way to call a passed in "action-creator" every time a change takes place. For instance, if you wanted to monitor a list of users for changes you would state the following in your code:
+      In both cases -- <i>list</i> and <i>node</i> -- the {{pill 'options'}} parameter can be used to build more complex 
     </p>
-    <pre><code>  const ac = (op)(id, data) => {...};
-  firebase.watch('/users', ac);</code></pre>
-    <p>
-      whereas if you just wanted to monitor changes to a specific user's profile you would state:
-    </p>
-    <pre><code>  const ac = (data) => {...};
-  firebase.watch('/users/1234', ac);</code></pre>
-    <p>
-      <b>Note:</b> the "ref" parameter can either be a string path in the DB (as the example above shows) or an actual Firebase "ref" object. This second form allows for more advanced queries to be watched.
-    </p>
+
     <p>
       <b>Note:</b> the "ac" parameter can either be an action creator <i>function</i> (as illustrated above) or just the name of the action type to be emitted. In this latter case you might have something like:
     </p>
@@ -258,9 +261,16 @@ firebase.ref('hello').once('value', (snapshot) => {
     <p>
       A very common requirement for an application is to have the logged in user's profile available (and kept up-to-date when changed) as a handy reference to application code. The Firebase Auth system has a limited user profile that it defines and if that's all you need there is nothing else needed as this will be returned as part of both the AUTH_SUCCESS and CURRENT_USER_CHANGED actions. Many applications though have their own user profiles which structurally fit into the limited properties that Firebase allows. In order to provide easy access to this richer user profile data you may opt-in with:
     </p>
-    <pre class=><code>  firebase.currentUserProfile(path)</code></pre>
+    <pre><code>  firebase.currentUserProfile(path, cb = null);</code></pre>
     <p>
       The {{tag 'path'}} parameter indicates the path in the Firebase DB where the list of User Profiles reside. It also assumes that the User Profiles are keyed by 'uid' (which is what the Authentiation system uses). If you leave the path parameter blank then it will default to "/users". Once enabled, the CURRENT_USER_CHANGED action will also include "profile" property off of the "user" property which will contain the broader user profile.
+    </p>
+    <p>
+      Optionally you can also also specify the {{tag 'cb'}} parameter which acts as a callback when the user profile has been updated. This will allow you to do any other actions that are needed once a user is logged in or out. The callbacks should be higher-order functions which are structured as:
+    </p>
+    <pre class="row col-12"><code>  fn(context) => (snap) => {...}</code></pre>
+    <p>
+      The first call will be set at configuration time, the second will be executed at the USER_PROFILE_CHANGED event. Typically the context call will be a reference to the {{pill 'firebase'}} service but it can be any context that will serve as useful for the callbacks to operate at the point of the event.
     </p>
     <p>
       {{ui-button 'load user profile with auth'

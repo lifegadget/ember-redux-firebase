@@ -37,12 +37,12 @@ const auth = (context, app) => {
     }, // end emailAndPassword
     signOut() {
       const { redux } = context.getProperties('redux');
-      app.auth().signOut();
       redux.dispatch({
         type: 'FIREBASE/AUTH/SIGN_OUT',
         uid: loggedInUser
       });
       loggedInUser = null;
+      return app.auth().signOut();
     },
 
   };

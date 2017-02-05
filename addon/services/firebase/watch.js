@@ -5,71 +5,105 @@ const nodeWatcher = (dispatch, actionCreator) => function nodeWatcher(snap) {
   if (typeof actionCreator === 'string') {
     dispatch({
       type: actionCreator,
-      changed: snap.val()
-    });
-  } else {
-    actionCreator(snap.val());
-  }
-};
-
-const addWatcher = (dispatch, actionCreator) => function addWatcher(snap, prevKey) {
-  if (typeof actionCreator === 'string') {
-    dispatch({
-      type: `${actionCreator}_ADDED`,
-      operation: 'added',
-      data: snap.val(),
       key: snap.key,
-      prevKey
+      data: snap.val()
     });
   } else {
-    actionCreator(snap.val(), prevKey);
+    actionCreator(snap);
   }
 };
 
-const listWatcher = (operation, dispatch, actionCreator) => function listWatcher(snap) {
+const addWatcher = (dispatch, actionCreator, cb = null) => function addWatcher(snap, prevKey) {
+  const payload = {
+    type: `${actionCreator}_ADDED`,
+    operation: 'added',
+    key: snap.key,
+    data: snap.val(),
+    prevKey
+  };
+  if (cb) {
+    cb(dispatch, payload);
+  }  
+
   if (typeof actionCreator === 'string') {
-    const opShortName = operation.split('_')[1];
-    dispatch({
-      type: `${actionCreator}_${opShortName.toUpperCase()}`,
-      operation: opShortName,
-      data: snap.val(),
-      key: snap.key
-    });
+    dispatch(payload);
   } else {
-    actionCreator(snap.val());
+    actionCreator(payload);
+  }
+};
+
+const listWatcher = (operation, dispatch, actionCreator, cb = null) => function listWatcher(snap) {
+  const opShortName = operation.split('_')[1];
+  const payload = {
+    type: `${actionCreator}_${opShortName.toUpperCase()}`,
+    operation: opShortName,
+    key: snap.key,
+    data: snap.val(),
+  };
+  if (cb) {
+    cb(dispatch, payload);
+  }
+
+  if (typeof actionCreator === 'string') {
+    dispatch(payload);
+  } else {
+    actionCreator(payload);
   }
 }
+
+const addOptionsToReference = function(reference, options) {
+  if (options.limitToFirst) {
+    reference = reference.limitToFirst(options.limitToFirst);
+  }
+  if (options.limitToLast) {
+    reference = reference.limitToLast(options.limitToLast);
+  }
+  if (options.orderByChild) {
+    reference = reference.orderByChild(options.orderByChild);
+  }
+  if (options.orderByKey) {
+    reference = reference.orderByKey(options.orderByKey);
+  }
+  if (options.orderByValue) {
+    reference = reference.orderByValue(options.orderByValue);
+  }
+  
+  return reference;
+};
 
 const watch = (context) => {
   const dispatch = get(context, 'redux').dispatch;
   return {
-    node(ref, actionCreator) {
-      const reference = typeof ref === 'string'
-        ? context.ref(ref)
-        : ref;
-      // console.log(`Reference to: `, reference.path.o);
-      reference.on('value', nodeWatcher(dispatch, actionCreator));
-      const watcher = {reference, path: reference.path.o, event: 'value', fn: nodeWatcher(dispatch, actionCreator)};
+    node(path, actionCreator, options = {}) {
+      let reference = addOptionsToReference(context.ref(path), options);
+
+      reference.on('value', nodeWatcher(dispatch, actionCreator, options.callback));
+
+      const watcher = { path, event: 'value', fn: nodeWatcher(dispatch, actionCreator, options.callback) };
       dispatch({type: 'FIREBASE/WATCHER_ADD', watcher});
       context.addWatcher(watcher);
     },
 
-    list(ref, actionCreator) {
-      const reference = typeof ref === 'string'
-        ? context.ref(ref)
-        : ref;
+    list(path, actionCreator, options = {}) {
+      let reference = addOptionsToReference(context.ref(path), options);
 
-      let watcher = addWatcher(dispatch, actionCreator);
-      reference.on('child_added', watcher);
-      context.addWatcher({reference, event: 'child_added', fn: watcher});
+      let fn = listWatcher('added', dispatch, actionCreator);
+      let watcher = {path, event: 'child_added', fn};
+      reference.on('child_added', fn);
+      context.addWatcher(watcher);
+      dispatch({type: 'FIREBASE/WATCHER_ADD', watcher});
 
-      watcher = listWatcher('removed', dispatch, actionCreator);
-      reference.on('child_removed', watcher);
-      context.addWatcher({reference, event: 'child_removed', fn: watcher});
+      fn = listWatcher('removed', dispatch, actionCreator);
+      watcher = {path, event: 'child_removed', fn};
+      reference.on('child_removed', fn);
+      context.addWatcher(watcher);
+      dispatch({type: 'FIREBASE/WATCHER_ADD', watcher});      
 
-      watcher = listWatcher('changed', dispatch, actionCreator);
-      reference.on('child_changed', watcher);
-      context.addWatcher({reference, event: 'child_changed', fn: watcher});
+      fn = listWatcher('changed', dispatch, actionCreator);
+      watcher = {path, event: 'child_changed', fn};
+      reference.on('child_changed', fn);
+      context.addWatcher(watcher);
+      dispatch({type: 'FIREBASE/WATCHER_ADD', watcher});
     }
   };
 };

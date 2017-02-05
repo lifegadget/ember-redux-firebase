@@ -7,7 +7,7 @@ const reducer = (state, action) => {
   switch(action.type) {
 
     case 'FIREBASE/AUTH/SUCCESS':
-    case 'FIREBASE/CURRENT_USER_CHANGED':
+    case 'FIREBASE/AUTH/CURRENT_USER_CHANGED':
       return state
         .merge({
           isAuthenticated: true,

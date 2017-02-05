@@ -22,7 +22,14 @@ export default Ember.Controller.extend({
       this.get('firebase').auth().signOut();
     },
     getUserProfileForCurrentUser() {
-      this.get('firebase').currentUserProfile('/users');
+      const cb = (dispatch) => (snap) => { 
+        dispatch({
+          type: 'USER_PROFILE_UPDATED',
+          key: snap.key,
+          data: snap.val()
+        });
+      };
+      this.get('firebase').currentUserProfile('/users', cb(this.get('redux').dispatch));
     },
     checkAuthenticated() {
       if(this.get('firebase').isAuthenticated) {

@@ -1,25 +1,22 @@
-const unwatch = (app, watchers) => {
+const unwatch = (context , watchers) => {
 
   return {
     all() {
       watchers.forEach(watcher => {
-        watcher.reference.off(watcher.event, watcher.fn);
+        context.ref(watcher.path).off(watcher.event);
       });
       watchers = [];
     },
 
-    node(ref) {
-      const reference = typeof ref === 'string' ? app.ref(ref) : ref;
-      reference.off('value');
-
+    node(path) {
+      context.ref(path).off('value');
     },
 
-    list(ref) {
-      const reference = typeof ref === 'string' ? app.ref(ref) : ref;
+    list(path) {
       const ops = ['child_added', 'child_removed', 'child_removed'];
       ops.forEach(op => {
-        reference.off(op);
-        watchers = watchers.filter(w => !(w.event === op && reference.path.o.join() === w.reference.join()));
+        context.ref(path).off(op);
+        watchers = watchers.filter(w => !(w.event === op && op.path === w.path));
       });
     }
   };

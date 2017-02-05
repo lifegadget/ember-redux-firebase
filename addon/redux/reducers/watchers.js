@@ -10,6 +10,9 @@ const reducer = (state, action) => {
     case 'FIREBASE/WATCHER_ADD':
       return state.push(action.watcher);
 
+    case 'FIREBASE/WATCHER_REMOVE':
+      return defaultState;
+
     case 'FIREBASE/AUTH/SIGN_OUT':
       return defaultState;
 
