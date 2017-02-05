@@ -88,12 +88,12 @@
     <p>
       Once connected the {{tag 'ref'}} method of the service gives you a "reference" to the database at any given part of the state tree. In this demo let's retrieve <i>hello</i> path from the database:
     </p>
-<pre class="col-6"><code>
-    firebase.ref('hello').once('value', (snapshot) => {
-      console.log(snapshot.val());
-    });
+<pre class="col-8"><code>
+firebase.ref('hello').once('value', (snapshot) => {
+  console.log(snapshot.val());
+});
 </code></pre>
-    <p class="col-6">
+    <p class="col-4">
       <p>&nbsp;</p>
       {{ui-button 'execute' onClick=(action 'referenceCheck')}}
       <br>
@@ -145,7 +145,9 @@
         </div>
       </div>
       <div class="row">
-        {{ui-button 'login' onClick=(action 'login' username password)}}
+        {{ui-button 'login' 
+          onClick=(action 'login' username password) 
+        }}
       </div>
     </div>
     <div class="col">
@@ -154,7 +156,6 @@
         <li>password: firebase</li>
       </ul>
     </div>
-
 
   </div>
   <div class="row downer">
@@ -168,7 +169,28 @@
     </p>
     <pre class="row col-12"><code>  firebase.auth().signOut();</code></pre>
     <p>
-      You can press the button to execute that here: {{ui-button 'sign out' onClick=(action 'signOut')}}
+      You can press the button to execute that here: 
+      {{ui-button 'sign out' 
+        onClick=(action 'signOut') 
+      }}
+    </p>
+
+    <h6 class="row col-12">Testing for Authentication</h6>
+    <p>
+      The {{pill 'firebase'}} service does a computed property {{tag 'isAuthenticated'}} which can be used to test if the Firebase database is currently authenticated. There are two things which should be considered when using this:
+    </p>
+    <ol>
+      <li>
+        <b>Offline</b><br>
+        The Firebase client library maintains the connection to the database even if the brower/client is reloaded. That means that unless you are using state initializers, your other forms of state will drop off on a reload but this check will still correctly report back the state of the Firebase connection.
+      </li>
+      <li>
+        <b>Redux State</b>
+        Who doesn't love a computed property right? Well of course we all do but whether the system is <i>authenticated</i> is really an important part of STATE and in Redux the goal would be to manage all of that state in the 
+      </li>
+    </ol>
+    <p>
+      {{ui-button 'check whether logged in' onClick=(action 'checkAuthenticated')}}
     </p>
   </div>
 
@@ -216,6 +238,19 @@
     <p>
       Where the above would dispatch events of type USER_PROFILE_ADDED, USER_PROFILE_CHANGED, USER_PROFILE_REMOVED.
     </p>
+
+    <h6>Unwatch</h6>
+    <p>
+      Once a a watch is setup, it remains set until it is explicitly <i>unset</i>. In order to be efficient with resources we must clean up after ourselves and this is achieved with the {{tag 'firebase.unwatch()'}} API endpoints:
+    </p>
+    <ul>
+      <li><code>node(ref)</code> - removes "value" event at given reference</li>
+      <li><code>list(ref)</code> - removes "add", "change", and "remove" events at given reference</li>
+      <li>
+        <code>all()</code> 
+        - removes all watcher references
+      </li>
+    </ul>
   </div>
 
   <div class="row">
@@ -226,6 +261,11 @@
     <pre class=><code>  firebase.currentUserProfile(path)</code></pre>
     <p>
       The {{tag 'path'}} parameter indicates the path in the Firebase DB where the list of User Profiles reside. It also assumes that the User Profiles are keyed by 'uid' (which is what the Authentiation system uses). If you leave the path parameter blank then it will default to "/users". Once enabled, the CURRENT_USER_CHANGED action will also include "profile" property off of the "user" property which will contain the broader user profile.
+    </p>
+    <p>
+      {{ui-button 'load user profile with auth'
+        onClick=(action 'getUserProfileForCurrentUser')
+      }}
     </p>
   </div>
 

@@ -6,11 +6,11 @@ const auth = (context, app) => {
   return {
     // AUTH
     emailAndPassword(email, password) {
-      const { redux, firebase } = context.getProperties('redux', 'firebase');
+      const { redux } = context.getProperties('redux');
       return new RSVP.Promise((resolve, reject) => {
 
         redux.dispatch({
-          type: 'AUTH_REQUEST',
+          type: 'FIREBASE/AUTH/REQUEST',
           kind: 'emailAndPassword',
           email
         });
@@ -18,17 +18,14 @@ const auth = (context, app) => {
           .then(user => {
             loggedInUser = user.uid;
             redux.dispatch({
-              type: 'AUTH_SUCCESS',
+              type: 'FIREBASE/AUTH/SUCCESS',
               user
             });
-            if(context._currentUserProfile) {
-              firebase.watch.node(`${context._currentUserProfile}.${user.uid}`, 'USER_PROFILE_UPDATED');
-            }
             resolve();
           })
           .catch(e => {
             redux.dispatch({
-              type: 'AUTH_FAILURE',
+              type: 'FIREBASE/AUTH/FAILURE',
               code: e.code,
               message: e.message,
               email
@@ -42,7 +39,7 @@ const auth = (context, app) => {
       const { redux } = context.getProperties('redux');
       app.auth().signOut();
       redux.dispatch({
-        type: 'AUTH_LOG_OFF',
+        type: 'FIREBASE/AUTH/SIGN_OUT',
         uid: loggedInUser
       });
       loggedInUser = null;

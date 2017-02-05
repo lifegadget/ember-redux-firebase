@@ -15,8 +15,12 @@ const { combineReducers } = redux;
  * reducer file.
  */
 
-import firebase from './firebase';
+import app from './app';
+import auth from './auth';
+import watchers from './watchers';
 
 export default combineReducers({
-  firebase
+  app,
+  auth,
+  watchers,
 });

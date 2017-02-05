@@ -1,13 +1,13 @@
 import Ember from 'ember';
+const { inject: { service }} = Ember;
 
 export default Ember.Controller.extend({
-  firebase: Ember.inject.service(),
-  redux: Ember.inject.service(),
+  firebase: service(),
+  redux: service(),
 
   actions: {
     login(username, password) {
       const {firebase, redux} = this.getProperties('firebase', 'redux');
-      console.log('login: ', username, password);
       firebase.auth().emailAndPassword(username, password, redux.dispatch);
     },
     loadService() {
@@ -20,6 +20,16 @@ export default Ember.Controller.extend({
     },
     signOut() {
       this.get('firebase').auth().signOut();
+    },
+    getUserProfileForCurrentUser() {
+      this.get('firebase').currentUserProfile('/users');
+    },
+    checkAuthenticated() {
+      if(this.get('firebase').isAuthenticated) {
+        window.alert('You ARE authenticated');
+      } else {
+        window.alert('You are not authenticated');
+      }
     }
   }
 });
