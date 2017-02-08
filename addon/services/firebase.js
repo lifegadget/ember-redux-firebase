@@ -2,7 +2,7 @@ import Ember from 'ember';
 import auth from './firebase/auth';
 import watch from './firebase/watch';
 import unwatch from './firebase/unwatch';
-const { get, debug, getOwner, inject: {service} } = Ember;
+const { get, debug, getOwner, inject: {service}, RSVP } = Ember;
 const DEFAULT_NAME = '[EmberFireRedux default app]';
 export let app;
 export let watchers = [];
@@ -16,8 +16,8 @@ function onAuthStateChanged(context) {
   app.auth().onAuthStateChanged(
     (user) => {
       dispatch({type: 'FIREBASE/AUTH/CURRENT_USER_CHANGED', user});
-      context.set('isAuthenticated', user ? true : false);
-      context.set('currentUser', user);
+      Ember.set(context, 'isAuthenticated', user ? true : false);
+      Ember.set(context, 'currentUser', user);
       const userProfile = context._currentUserProfile;
       const ac = (dispatch, firebase, cb = null) => (snap) => {
         dispatch({
@@ -94,6 +94,49 @@ const fb = Ember.Service.extend({
 
   ref(refPath) {
     return app.database().ref(refPath);
+  },
+
+  set(path, value, name) {
+    return this._writeToDB('set', path, value, name);
+  },
+  push(path, value, name) {
+    return this._writeToDB('push', path, value, name);
+  },
+  update(path, value, name) {
+    return this._writeToDB('update', path, value, name);
+  },
+
+  _writeToDB(operation, path, value, name) {
+    const { redux } = this.getProperties('redux');
+    const { dispatch } = redux;
+    const opName = operation.toUpperCase();
+    name = `FIREBASE/${name}`;
+    // Firebase hates "undefined" values
+    if(typeof value === 'object') {
+      Object.keys(value).forEach(prop => {
+        if(value[prop] === undefined) {
+          delete value[prop];
+        }
+      });
+    }
+    dispatch({type: `${name}/${opName}_ATTEMPT`, path, value });
+    return new RSVP.Promise((resolve, reject) => {
+      app.database().ref(path).set(value)
+        .then((result) => {
+          dispatch({type: `${name}/${opName}_SUCCESS`, path, value });
+          resolve(result);
+        })
+        .catch(e => {
+          dispatch({
+            type: `${name}/${opName}_FAILURE`, 
+            code: e.code, 
+            message: e.message,
+            path, 
+            value, 
+          });
+          reject(e);
+        });
+    });
   },
 
   auth() {

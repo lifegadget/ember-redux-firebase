@@ -49,7 +49,7 @@ const listWatcher = (operation, dispatch, actionCreator, cb = null) => function 
   } else {
     actionCreator(payload);
   }
-}
+};
 
 const addOptionsToReference = function(reference, options) {
   if (options.limitToFirst) {
