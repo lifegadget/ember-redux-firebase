@@ -1,15 +1,47 @@
 import Ember from 'ember';
-const { debug, RSVP } = Ember;
+const { debug, RSVP: {Promise} } = Ember;
 let loggedInUser = null;
 
 const auth = (context, app) => {
+  const { redux } = context.getProperties('redux');
+  const dispatch = redux.dispatch;
+
+  const handleSuccess = (resolve, type, params = {}) => {
+    const payload = Ember.assign({}, params, {
+      type: `${type}_SUCCESS`, 
+    });
+    dispatch(payload);
+    resolve(payload);
+  };
+  const handleError = (err, reject, type, params = {}) => {
+    dispatch(Ember.assign({}, params, {
+      type: `${type}_FAILURE`, 
+      code: err.code || 'not-specified', 
+      message: err.message || err
+    }));
+    reject(err);
+  };
+
+  const getCredential = (provider, ...args) => {
+    switch(provider) {
+      case 'email':
+      case 'emailAndPassword':
+      const [email, password] = args;
+        return window.firebase.auth.EmailAuthProvider.credential(email, password);
+      case 'google':
+        return window.firebase.auth.GoogleAuthProvider.credential('googleUser.getAuthResponse().id_token');
+      case 'facebook':
+        return window.firebase.auth.FacebookAuthProvider.credential('response.authResponse.accessToken');
+    }
+  }; 
+
+
   return {
     // AUTH
     emailAndPassword(email, password) {
-      const { redux } = context.getProperties('redux');
-      return new RSVP.Promise((resolve, reject) => {
+      return new Promise((resolve, reject) => {
 
-        redux.dispatch({
+        dispatch({
           type: 'FIREBASE/AUTH/REQUEST',
           kind: 'emailAndPassword',
           email
@@ -24,7 +56,7 @@ const auth = (context, app) => {
             resolve(user);
           })
           .catch(e => {
-            redux.dispatch({
+            dispatch({
               type: 'FIREBASE/AUTH/FAILURE',
               code: e.code,
               message: e.message,
@@ -36,57 +68,43 @@ const auth = (context, app) => {
       }); // end PROMISE
     }, // end emailAndPassword
     signInAnonymously() {
-      const { redux } = context.getProperties('redux');
-      return new RSVP.Promise((resolve, reject) => {
+      return new Promise((resolve, reject) => {
+        const action = 'FIREBASE/AUTH';
 
-        redux.dispatch({
-          type: 'FIREBASE/AUTH/REQUEST',
+        dispatch({
+          type: `${action}_ATTEMPT`,
           kind: 'anonymous'
         });
         app.auth().signInAnonymously()
-          .then(user => {
-            loggedInUser = user.uid;
-            redux.dispatch({
-              type: 'FIREBASE/AUTH/SUCCESS',
-              user
-            });
-            resolve(user);
-          })
-          .catch(e => {
-            redux.dispatch({
-              type: 'FIREBASE/AUTH/FAILURE',
-              code: e.code,
-              message: e.message
-            });
-            reject(e);
-          });
+          .then(user => Promise.resolve( loggedInUser = user.uid ))
+          .then( ( ) => handleSuccess(resolve, action, {uid: loggedInUser}) )
+          .catch((e) => handleError(e, reject, action, {}) );
 
       }); // end Promise
     },
     updateProfile(props) {
-      const { redux } = context.getProperties('redux');
-      const dispatch = redux.dispatch;
-      return new RSVP.Promise((resolve, reject) => {
+      console.log(`updating with: `, props);
+      return new Promise((resolve, reject) => {
 
-      if(props.email) {
-        const email = props.email;
-        dispatch({type: 'FIREBASE/AUTH/PROFILE_EMAIL/SETTING', email})
-        app.auth().currentUser.updateEmail(props.email)
-          .then(() => dispatch({type: 'FIREBASE/AUTH/PROFILE_EMAIL/SUCCESS', email}))
-          .catch((e) => dispatch({
-            type: 'FIREBASE/AUTH/PROFILE_EMAIL/FAILED', 
-            email, 
-            code: e.code,
-            message: e.message
-          }));
-        delete props.email;
-      }
+        let action = 'FIREBASE/AUTH/PROFILE_EMAIL';
+        if(props.email) {
+          const email = props.email;
+          delete props.email;
+          dispatch({type: `${action}_ATTEMPT`, email});
+          app.auth().currentUser.updateEmail(email)
+            .then( ( ) => handleSuccess(f => f, action, {email}) )
+            .catch((e) => handleError(e, f => f, action, {email}) );
+        }
 
-      dispatch({type: 'FIREBASE/AUTH/PROFILE/SETTING', props})
-      app.auth().currentUser.updateProfile(props) 
-          .then(() => dispatch({type: 'FIREBASE/AUTH/PROFILE/SUCCESS', props}))
-          .then(resolve)
-          .catch(reject);
+        if (Object.keys(props).length > 0) {
+          action = 'FIREBASE/AUTH/PROFILE_UPDATE';
+          dispatch({type: `${action}_ATTEMPT`, props});
+          app.auth().currentUser.updateProfile(props) 
+              .then( ( ) => handleSuccess(resolve, action, props) )
+              .catch((e) => handleError(e, reject, action, props) );
+        } else {
+          resolve();
+        }
 
       });
     },
@@ -99,18 +117,59 @@ const auth = (context, app) => {
       loggedInUser = null;
       return app.auth().signOut();
     },
+    /**
+     * Send an email to logged in user to verfy their account
+     */
+    sendEmailVerification() {
+      const email = app.currentUser.email;
+      const action = 'FIREBASE/AUTH/EMAIL_VERIFICATION';
+      dispatch({type: `${action}_ATTEMPT`, email});
+      return new Promise((resolve, reject) => {
+        app.auth().currentUser.sendEmailVerification()
+          .then( ( ) => handleSuccess(resolve, action, {email}) )
+          .catch((e) => handleError(e, reject, action, {email}) );
+      });
+    },
 
-    getCredential(provider, ...args) {
-      switch(provider) {
-        case 'email':
-        case 'emailAndPassword':
-          return window.firebase.auth.EmailAuthProvider(...args);
-        case 'google':
-          return window.firebase.auth.GoogleAuthProvider('googleUser.getAuthResponse().id_token');
-        case 'facebook':
-          return window.firebase.auth.FacebookAuthProvider('response.authResponse.accessToken');
-      }
-    } 
+    sendPasswordResetEmail(newPassword) {
+      const action = 'FIREBASE/AUTH/PASSWORD_RESET';
+      dispatch({type: `${action}_ATTEMPT`, newPassword});
+      return new Promise((resolve, reject) => {
+        app.auth().currentUser.sendPasswordResetEmail(newPassword)
+          .then( ( ) => handleSuccess(resolve, action, {}) )
+          .catch((e) => handleError(e, reject, action, {}) );
+      });
+    },
+
+    updatePassword(newPassword) {
+      const action = 'FIREBASE/AUTH/UPDATE_PASSWORD';
+      dispatch({type: `${action}_ATTEMPT`});
+      return new Promise((resolve, reject) => {
+        app.auth().currentUser.updatePassword(newPassword)
+          .then( ( ) => handleSuccess(resolve, action, {}) )
+          .catch((e) => handleError(e, reject, action, {}) );
+      });
+    },
+
+    /**
+     * Upgrades an anonymous account to a Email and Password account
+     */
+    upgradeToEmailAndPassword(username, password) {
+      const action = 'FIREBASE/AUTH/UPGRADE_ACCOUNT';
+      dispatch({
+        type: `${action}_ATTEMPT`, 
+        target: 'email/password', 
+        message: 'upgrading from anonymous account to email/password'
+      });
+      const credential = getCredential('emailAndPassword', username, password);
+      return new Promise((resolve, reject) => {
+        
+        app.auth().currentUser.link(credential)
+          .then( (user) => handleSuccess(resolve, action, {user}) )
+          .catch((e) => handleError(e, reject, action, {}) );
+      });
+
+    },
 
   };
 };

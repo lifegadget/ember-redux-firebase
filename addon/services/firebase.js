@@ -2,7 +2,7 @@ import Ember from 'ember';
 import auth from './firebase/auth';
 import watch from './firebase/watch';
 import unwatch from './firebase/unwatch';
-const { get, debug, getOwner, inject: {service}, RSVP } = Ember;
+const { get, debug, getOwner, inject: {service}, RSVP: {Promise} } = Ember;
 const DEFAULT_NAME = '[EmberFireRedux default app]';
 export let app;
 export let watchers = [];
@@ -120,7 +120,7 @@ const fb = Ember.Service.extend({
       });
     }
     dispatch({type: `${name}/${opName}_ATTEMPT`, path, value });
-    return new RSVP.Promise((resolve, reject) => {
+    return new Promise((resolve, reject) => {
       app.database().ref(path).set(value)
         .then((result) => {
           dispatch({type: `${name}/${opName}_SUCCESS`, path, value });
@@ -136,6 +136,38 @@ const fb = Ember.Service.extend({
           });
           reject(e);
         });
+    });
+  },
+
+  /**
+   * Removes a path from the database, dispatching appropriate
+   * actions along the way
+   */
+  remove(path, name) {
+    const { redux } = this.getProperties('redux');
+    const { dispatch } = redux;
+
+    dispatch({type: `FIREBASE/REMOVE_${name}_ATTEMPT`, path});
+    return new Promise((resolve, reject) => {
+
+      app.database().ref(path).remove()
+        .then( ( ) => {
+          dispatch({
+            type: `FIREBASE/REMOVE_${name}_SUCCESS`, 
+            path,
+          }); 
+          resolve();
+        })
+        .catch((e) => {
+          dispatch({
+            type: `FIREBASE/REMOVE_${name}_FAILURE`, 
+            path,
+            code: e.code,
+            message: `Failed to remove path from Firebase: {e.message || e}`
+          });
+          reject(e);
+        });
+
     });
   },
 

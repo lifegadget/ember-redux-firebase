@@ -1,7 +1,8 @@
+import Immutable from 'npm:immutable';
 /**
  * app Reducer
  */
-const defaultState = window.Immutable.OrderedMap();
+const defaultState = Immutable.OrderedMap();
 const reducer = (state, action) => {
 
   switch(action.type) {

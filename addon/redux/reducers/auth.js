@@ -1,13 +1,15 @@
+import Immutable from 'npm:immutable';
 /**
  * counterparties Reducer
  */
-const defaultState = window.Immutable.OrderedMap();
+const defaultState = Immutable.OrderedMap();
 const reducer = (state, action) => {
 
   switch(action.type) {
-
-    case 'FIREBASE/AUTH/SUCCESS':
     case 'FIREBASE/AUTH/CURRENT_USER_CHANGED':
+      return state.merge({currentUser: action.user});
+      
+    case 'FIREBASE/AUTH/SUCCESS':
       return state
         .merge({
           isAuthenticated: true,

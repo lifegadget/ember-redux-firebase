@@ -1,8 +1,8 @@
-import Ember from 'ember';
+import Immutable from 'npm:immutable';
 /**
  * counterparties Reducer
  */
-const defaultState = window.Immutable.List();
+const defaultState = Immutable.List();
 const reducer = (state, action) => {
 
   switch(action.type) {

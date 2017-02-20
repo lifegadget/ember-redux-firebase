@@ -88,20 +88,20 @@ const watch = (context) => {
       let reference = addOptionsToReference(context.ref(path), options);
 
       let fn = listWatcher('added', dispatch, actionCreator);
-      let watcher = {path, event: 'child_added', fn};
-      reference.on('child_added', fn);
+      let eventContext = reference.on('child_added', fn);
+      let watcher = {path, event: 'child_added', fn, eventContext};
       context.addWatcher(watcher);
       dispatch({type: 'FIREBASE/WATCHER_ADD', watcher});
 
       fn = listWatcher('removed', dispatch, actionCreator);
-      watcher = {path, event: 'child_removed', fn};
-      reference.on('child_removed', fn);
+      eventContext = reference.on('child_removed', fn);
+      watcher = {path, event: 'child_removed', fn, eventContext};
       context.addWatcher(watcher);
       dispatch({type: 'FIREBASE/WATCHER_ADD', watcher});      
 
       fn = listWatcher('changed', dispatch, actionCreator);
-      watcher = {path, event: 'child_changed', fn};
-      reference.on('child_changed', fn);
+      eventContext = reference.on('child_changed', fn);
+      watcher = {path, event: 'child_changed', fn, eventContext};
       context.addWatcher(watcher);
       dispatch({type: 'FIREBASE/WATCHER_ADD', watcher});
     }
