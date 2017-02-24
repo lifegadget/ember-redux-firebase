@@ -35,8 +35,12 @@ const removed = (path, type) => () => {
      * removes all events associated with a given path
      */
     byPath(path) {
-      const toBeRemoved = watchers.
-      toBeRemoved.forEach(watcher => context.ref(path).off(null,removed(path, 'byPath'), watcher.eventContext ));
+      const toBeRemoved = watchers.filter()
+      toBeRemoved.forEach(watcher => context.ref(path).off(
+        null,
+        removed(watcher.path, 'byPath'), 
+        watcher.eventContext 
+      ));
     },
   };
 };

@@ -207,4 +207,5 @@ const fb = Ember.Service.extend({
 
 });
 
+fb[Ember.NAME_KEY] = 'firebase-redux';
 export default fb;
