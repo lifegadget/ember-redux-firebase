@@ -7,13 +7,13 @@ const reducer = (state, action) => {
 
   switch(action.type) {
 
-    case 'FIREBASE/WATCHER_ADD':
+    case '@firebase/WATCHER_ADD':
       return state.push(action.watcher);
 
-    case 'FIREBASE/WATCHER_REMOVE':
+    case '@firebase/WATCHER_REMOVE':
       return defaultState;
 
-    case 'FIREBASE/AUTH/SIGN_OUT':
+    case '@firebase/AUTH/SIGN_OUT':
       return defaultState;
 
 

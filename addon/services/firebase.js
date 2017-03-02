@@ -3,7 +3,7 @@ import auth from './firebase/auth';
 import watch from './firebase/watch';
 import unwatch from './firebase/unwatch';
 const { get, debug, getOwner, inject: {service}, RSVP: {Promise} } = Ember;
-const DEFAULT_NAME = '[EmberFireRedux default app]';
+const DEFAULT_NAME = '[ember-redux app]';
 export let app;
 export let watchers = [];
 
@@ -15,7 +15,7 @@ function onAuthStateChanged(context) {
   const dispatch = context.get('redux.dispatch');
   app.auth().onAuthStateChanged(
     (user) => {
-      dispatch({type: 'FIREBASE/AUTH/CURRENT_USER_CHANGED', user});
+      dispatch({type: '@firebase/AUTH/CURRENT_USER_CHANGED', user});
       Ember.set(context, 'isAuthenticated', user ? true : false);
       Ember.set(context, 'currentUser', user);
       const userProfile = context._currentUserProfile;
@@ -39,12 +39,12 @@ function onConnectedChanged(dispatch, url) {
   connectedRef.on('value', (snap) => {
     if(snap.val()) {
       dispatch({
-        type: 'FIREBASE/APP/CONNECTED',
+        type: '@firebase/app/CONNECTED',
         url
       });
     } else {
       dispatch({
-        type: 'FIREBASE/APP/DISCONNECTED',
+        type: '@firebase/app/DISCONNECTED',
         url
       });
     }
@@ -84,7 +84,7 @@ const fb = Ember.Service.extend({
     const modulePrefix = get(config, 'modulePrefix');
     app = window.firebase.initializeApp(config.firebase, modulePrefix || DEFAULT_NAME);
     redux.dispatch({
-      type: 'FIREBASE/APP/INITIALIZED', 
+      type: '@firebase/app/INITIALIZED', 
       url: config.firebase.databaseURL,
       appName: modulePrefix || DEFAULT_NAME
     });
@@ -110,7 +110,7 @@ const fb = Ember.Service.extend({
     const { redux } = this.getProperties('redux');
     const { dispatch } = redux;
     const opName = operation.toUpperCase();
-    name = `FIREBASE/${name}`;
+    name = `@firebase/${name}`;
     // Firebase hates "undefined" values
     if(typeof value === 'object') {
       Object.keys(value).forEach(prop => {
@@ -147,20 +147,20 @@ const fb = Ember.Service.extend({
     const { redux } = this.getProperties('redux');
     const { dispatch } = redux;
 
-    dispatch({type: `FIREBASE/REMOVE_${name}_ATTEMPT`, path});
+    dispatch({type: `@firebase/REMOVE_${name}_ATTEMPT`, path});
     return new Promise((resolve, reject) => {
 
       app.database().ref(path).remove()
         .then( ( ) => {
           dispatch({
-            type: `FIREBASE/REMOVE_${name}_SUCCESS`, 
+            type: `@firebase/REMOVE_${name}_SUCCESS`, 
             path,
           }); 
           resolve();
         })
         .catch((e) => {
           dispatch({
-            type: `FIREBASE/REMOVE_${name}_FAILURE`, 
+            type: `@firebase/REMOVE_${name}_FAILURE`, 
             path,
             code: e.code,
             message: `Failed to remove path from Firebase: {e.message || e}`

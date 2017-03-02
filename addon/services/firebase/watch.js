@@ -80,7 +80,7 @@ const watch = (context) => {
       reference.on('value', nodeWatcher(dispatch, actionCreator, options.callback));
 
       const watcher = { path, event: 'value', fn: nodeWatcher(dispatch, actionCreator, options.callback) };
-      dispatch({type: 'FIREBASE/WATCHER_ADD', watcher});
+      dispatch({type: '@firebase/WATCHER_ADD', watcher});
       context.addWatcher(watcher);
     },
 
@@ -91,19 +91,19 @@ const watch = (context) => {
       let eventContext = reference.on('child_added', fn);
       let watcher = {path, event: 'child_added', fn, eventContext};
       context.addWatcher(watcher);
-      dispatch({type: 'FIREBASE/WATCHER_ADD', watcher});
+      dispatch({type: '@firebase/WATCHER_ADD', watcher});
 
       fn = listWatcher('removed', dispatch, actionCreator);
       eventContext = reference.on('child_removed', fn);
       watcher = {path, event: 'child_removed', fn, eventContext};
       context.addWatcher(watcher);
-      dispatch({type: 'FIREBASE/WATCHER_ADD', watcher});      
+      dispatch({type: '@firebase/WATCHER_ADD', watcher});      
 
       fn = listWatcher('changed', dispatch, actionCreator);
       eventContext = reference.on('child_changed', fn);
       watcher = {path, event: 'child_changed', fn, eventContext};
       context.addWatcher(watcher);
-      dispatch({type: 'FIREBASE/WATCHER_ADD', watcher});
+      dispatch({type: '@firebase/WATCHER_ADD', watcher});
     }
   };
 };

@@ -6,10 +6,10 @@ const defaultState = Immutable.OrderedMap();
 const reducer = (state, action) => {
 
   switch(action.type) {
-    case 'FIREBASE/AUTH/CURRENT_USER_CHANGED':
+    case '@firebase/AUTH/CURRENT_USER_CHANGED':
       return state.merge({currentUser: action.user});
       
-    case 'FIREBASE/AUTH/SUCCESS':
+    case '@firebase/AUTH/SUCCESS':
       return state
         .merge({
           isAuthenticated: true,
@@ -18,8 +18,8 @@ const reducer = (state, action) => {
         .delete('code')
         .delete('message');
 
-    case 'FIREBASE/AUTH/SIGN_OUT':
-    case 'FIREBASE/AUTH/FAILURE':
+    case '@firebase/AUTH/SIGN_OUT':
+    case '@firebase/AUTH/FAILURE':
       return state.merge({
         isAuthenticated: false,
         currentUser: null,

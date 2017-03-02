@@ -7,7 +7,7 @@ const reducer = (state, action) => {
 
   switch(action.type) {
 
-    case 'FIREBASE/APP/INITIALIZED':
+    case '@firebase/app/INITIALIZED':
       return state.merge({
         initialized: true,
         appName: action.appName,

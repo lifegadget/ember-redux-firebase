@@ -42,7 +42,7 @@ const auth = (context, app) => {
       return new Promise((resolve, reject) => {
 
         dispatch({
-          type: 'FIREBASE/AUTH/REQUEST',
+          type: '@firebase/AUTH/REQUEST',
           kind: 'emailAndPassword',
           email
         });
@@ -50,14 +50,14 @@ const auth = (context, app) => {
           .then(user => {
             loggedInUser = user.uid;
             redux.dispatch({
-              type: 'FIREBASE/AUTH/SUCCESS',
+              type: '@firebase/AUTH/SUCCESS',
               user
             });
             resolve(user);
           })
           .catch(e => {
             dispatch({
-              type: 'FIREBASE/AUTH/FAILURE',
+              type: '@firebase/AUTH/FAILURE',
               code: e.code,
               message: e.message,
               email
@@ -69,7 +69,7 @@ const auth = (context, app) => {
     }, // end emailAndPassword
     signInAnonymously() {
       return new Promise((resolve, reject) => {
-        const action = 'FIREBASE/AUTH';
+        const action = '@firebase/AUTH';
 
         dispatch({
           type: `${action}_ATTEMPT`,
@@ -82,11 +82,12 @@ const auth = (context, app) => {
 
       }); // end Promise
     },
+    
     updateProfile(props) {
-      console.log(`updating with: `, props);
       return new Promise((resolve, reject) => {
 
-        let action = 'FIREBASE/AUTH/PROFILE_EMAIL';
+        let action = '@firebase/AUTH/PROFILE_EMAIL';
+        // if email is in hash then use separate API
         if(props.email) {
           const email = props.email;
           delete props.email;
@@ -97,7 +98,7 @@ const auth = (context, app) => {
         }
 
         if (Object.keys(props).length > 0) {
-          action = 'FIREBASE/AUTH/PROFILE_UPDATE';
+          action = '@firebase/AUTH/PROFILE_UPDATE';
           dispatch({type: `${action}_ATTEMPT`, props});
           app.auth().currentUser.updateProfile(props) 
               .then( ( ) => handleSuccess(resolve, action, props) )
@@ -108,11 +109,12 @@ const auth = (context, app) => {
 
       });
     },
-    signOut() {
+    signOut(message = '') {
       const { redux } = context.getProperties('redux');
       redux.dispatch({
-        type: 'FIREBASE/AUTH/SIGN_OUT',
-        uid: loggedInUser
+        type: '@firebase/AUTH/SIGN_OUT',
+        uid: loggedInUser,
+        message
       });
       loggedInUser = null;
       return app.auth().signOut();
@@ -122,7 +124,7 @@ const auth = (context, app) => {
      */
     sendEmailVerification() {
       const email = app.currentUser.email;
-      const action = 'FIREBASE/AUTH/EMAIL_VERIFICATION';
+      const action = '@firebase/AUTH/EMAIL_VERIFICATION';
       dispatch({type: `${action}_ATTEMPT`, email});
       return new Promise((resolve, reject) => {
         app.auth().currentUser.sendEmailVerification()
@@ -132,7 +134,7 @@ const auth = (context, app) => {
     },
 
     sendPasswordResetEmail(newPassword) {
-      const action = 'FIREBASE/AUTH/PASSWORD_RESET';
+      const action = '@firebase/AUTH/PASSWORD_RESET';
       dispatch({type: `${action}_ATTEMPT`, newPassword});
       return new Promise((resolve, reject) => {
         app.auth().currentUser.sendPasswordResetEmail(newPassword)
@@ -142,7 +144,7 @@ const auth = (context, app) => {
     },
 
     updatePassword(newPassword) {
-      const action = 'FIREBASE/AUTH/UPDATE_PASSWORD';
+      const action = '@firebase/AUTH/UPDATE_PASSWORD';
       dispatch({type: `${action}_ATTEMPT`});
       return new Promise((resolve, reject) => {
         app.auth().currentUser.updatePassword(newPassword)
@@ -155,7 +157,7 @@ const auth = (context, app) => {
      * Upgrades an anonymous account to a Email and Password account
      */
     upgradeToEmailAndPassword(username, password) {
-      const action = 'FIREBASE/AUTH/UPGRADE_ACCOUNT';
+      const action = '@firebase/AUTH/UPGRADE_ACCOUNT';
       dispatch({
         type: `${action}_ATTEMPT`, 
         target: 'email/password', 
