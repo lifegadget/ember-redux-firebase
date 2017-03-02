@@ -124,7 +124,7 @@ const auth = (context, app) => {
      */
     sendEmailVerification() {
       const email = app.currentUser.email;
-      const action = '@firebase/AUTH/EMAIL_VERIFICATION';
+      const action = '@firebase/auth/EMAIL_VERIFICATION';
       dispatch({type: `${action}_ATTEMPT`, email});
       return new Promise((resolve, reject) => {
         app.auth().currentUser.sendEmailVerification()
@@ -134,7 +134,7 @@ const auth = (context, app) => {
     },
 
     sendPasswordResetEmail(newPassword) {
-      const action = '@firebase/AUTH/PASSWORD_RESET';
+      const action = '@firebase/auth/PASSWORD_RESET';
       dispatch({type: `${action}_ATTEMPT`, newPassword});
       return new Promise((resolve, reject) => {
         app.auth().currentUser.sendPasswordResetEmail(newPassword)
@@ -144,7 +144,7 @@ const auth = (context, app) => {
     },
 
     updatePassword(newPassword) {
-      const action = '@firebase/AUTH/UPDATE_PASSWORD';
+      const action = '@firebase/auth/UPDATE_PASSWORD';
       dispatch({type: `${action}_ATTEMPT`});
       return new Promise((resolve, reject) => {
         app.auth().currentUser.updatePassword(newPassword)
@@ -157,7 +157,7 @@ const auth = (context, app) => {
      * Upgrades an anonymous account to a Email and Password account
      */
     upgradeToEmailAndPassword(username, password) {
-      const action = '@firebase/AUTH/UPGRADE_ACCOUNT';
+      const action = '@firebase/auth/UPGRADE_ACCOUNT';
       dispatch({
         type: `${action}_ATTEMPT`, 
         target: 'email/password', 

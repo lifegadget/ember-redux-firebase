@@ -13,7 +13,7 @@ const reducer = (state, action) => {
     case '@firebase/WATCHER_REMOVE':
       return defaultState;
 
-    case '@firebase/AUTH/SIGN_OUT':
+    case '@firebase/auth/SIGN_OUT':
       return defaultState;
 
 

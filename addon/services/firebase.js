@@ -15,7 +15,7 @@ function onAuthStateChanged(context) {
   const dispatch = context.get('redux.dispatch');
   app.auth().onAuthStateChanged(
     (user) => {
-      dispatch({type: '@firebase/AUTH/CURRENT_USER_CHANGED', user});
+      dispatch({type: '@firebase/auth/CURRENT_USER_CHANGED', user});
       Ember.set(context, 'isAuthenticated', user ? true : false);
       Ember.set(context, 'currentUser', user);
       const userProfile = context._currentUserProfile;
