@@ -3,7 +3,7 @@ import auth from './firebase/auth';
 import watch from './firebase/watch';
 import unwatch from './firebase/unwatch';
 const { get, debug, getOwner, inject: {service}, RSVP: {Promise} } = Ember;
-const DEFAULT_NAME = '[ember-redux app]';
+const DEFAULT_NAME = '[ember-redux-core]';
 export let app;
 export let watchers = [];
 
@@ -15,7 +15,8 @@ function onAuthStateChanged(context) {
   const dispatch = context.get('redux.dispatch');
   app.auth().onAuthStateChanged(
     (user) => {
-      dispatch({type: '@firebase/auth/CURRENT_USER_CHANGED', user});
+      const actionType = user ? 'CURRENT_USER_CHANGED' : 'SIGN_OUT';
+      dispatch({type: `@firebase/auth/${actionType}`, user});
       Ember.set(context, 'isAuthenticated', user ? true : false);
       Ember.set(context, 'currentUser', user);
       const userProfile = context._currentUserProfile;
@@ -29,7 +30,9 @@ function onAuthStateChanged(context) {
           cb(snap);
         }
       };
-      context.watch().node(`${userProfile.path}/${user.uid}`, ac(dispatch, context, userProfile.cb));
+      if (user) {
+        context.watch().node(`${userProfile.path}/${user.uid}`, ac(dispatch, context, userProfile.cb));
+      }
     },
     (e) => dispatch({type: 'ERROR_DISPATCHING', message: e.message}));
 }
@@ -121,7 +124,7 @@ const fb = Ember.Service.extend({
     }
     dispatch({type: `${name}/${opName}_ATTEMPT`, path, value });
     return new Promise((resolve, reject) => {
-      app.database().ref(path).set(value)
+      app.database().ref(path)[operation](value)
         .then((result) => {
           dispatch({type: `${name}/${opName}_SUCCESS`, path, value });
           resolve(result);

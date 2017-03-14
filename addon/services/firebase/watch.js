@@ -1,6 +1,15 @@
 import Ember from 'ember';
 const { get } = Ember;
 
+/**
+ * nodeWatcher
+ * 
+ * Watches for "value" events at a particular path in the database. Is meant for leaf nodes
+ * in the database or non-list based paths.
+ * 
+ * @param {Function} dispatch the redux dispatch function   
+ * @param {mixed} actionCreator either a string which names the action type or an action creator function
+ */
 const nodeWatcher = (dispatch, actionCreator) => function nodeWatcher(snap) {
   if (typeof actionCreator === 'string') {
     dispatch({
@@ -74,6 +83,15 @@ const addOptionsToReference = function(reference, options) {
 const watch = (context) => {
   const dispatch = get(context, 'redux').dispatch;
   return {
+    /**
+     * node
+     * 
+     * Allows containers to add a watcher to a DB ref which will listen to Firebase "value events"
+     * 
+     * @param {string} path the path reference to state in Firebase
+     * @param {mixed} actionCreator either a string "type" for the action or a action-creator function
+     * @param {Object} options query modifiers to the path can optionally be added 
+     */
     node(path, actionCreator, options = {}) {
       let reference = addOptionsToReference(context.ref(path), options);
 

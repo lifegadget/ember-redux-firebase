@@ -42,7 +42,7 @@ const auth = (context, app) => {
       return new Promise((resolve, reject) => {
 
         dispatch({
-          type: '@firebase/AUTH/REQUEST',
+          type: '@firebase/auth/REQUEST',
           kind: 'emailAndPassword',
           email
         });
@@ -50,14 +50,14 @@ const auth = (context, app) => {
           .then(user => {
             loggedInUser = user.uid;
             redux.dispatch({
-              type: '@firebase/AUTH/SUCCESS',
+              type: '@firebase/auth/SUCCESS',
               user
             });
             resolve(user);
           })
           .catch(e => {
             dispatch({
-              type: '@firebase/AUTH/FAILURE',
+              type: '@firebase/auth/FAILURE',
               code: e.code,
               message: e.message,
               email
@@ -69,7 +69,7 @@ const auth = (context, app) => {
     }, // end emailAndPassword
     signInAnonymously() {
       return new Promise((resolve, reject) => {
-        const action = '@firebase/AUTH';
+        const action = '@firebase/auth';
 
         dispatch({
           type: `${action}_ATTEMPT`,
@@ -83,22 +83,34 @@ const auth = (context, app) => {
       }); // end Promise
     },
     
+    updateProfileEmail(email) {
+      return new Promise((resolve, reject) => {
+        const action = '@firebase/auth/PROFILE_EMAIL';
+        dispatch({type: `${action}_ATTEMPT`, email});
+        if(app.auth().currentUser) {
+          app.auth().currentUser.updateEmail(email)
+            .then( ( ) => handleSuccess(resolve, action, {email}) )
+            .catch((e) => handleError(e, reject, action, {email}) );
+        } else {
+          handleError(
+            new Error('Attempt to update profile email when not logged in'),
+            reject, action, {email}
+          );
+        }
+      });
+    },
+
     updateProfile(props) {
       return new Promise((resolve, reject) => {
 
-        let action = '@firebase/AUTH/PROFILE_EMAIL';
-        // if email is in hash then use separate API
+        let action = '@firebase/auth/PROFILE_EMAIL';
         if(props.email) {
-          const email = props.email;
+          Ember.debug('ember-redux-firebase: do not include email updates in updateProfile(), use updateProfileEmail() instead.');
           delete props.email;
-          dispatch({type: `${action}_ATTEMPT`, email});
-          app.auth().currentUser.updateEmail(email)
-            .then( ( ) => handleSuccess(f => f, action, {email}) )
-            .catch((e) => handleError(e, f => f, action, {email}) );
         }
 
         if (Object.keys(props).length > 0) {
-          action = '@firebase/AUTH/PROFILE_UPDATE';
+          action = '@firebase/auth/PROFILE_UPDATE';
           dispatch({type: `${action}_ATTEMPT`, props});
           app.auth().currentUser.updateProfile(props) 
               .then( ( ) => handleSuccess(resolve, action, props) )
@@ -112,7 +124,7 @@ const auth = (context, app) => {
     signOut(message = '') {
       const { redux } = context.getProperties('redux');
       redux.dispatch({
-        type: '@firebase/AUTH/SIGN_OUT',
+        type: '@firebase/auth/SIGN_OUT',
         uid: loggedInUser,
         message
       });
@@ -123,7 +135,8 @@ const auth = (context, app) => {
      * Send an email to logged in user to verfy their account
      */
     sendEmailVerification() {
-      const email = app.currentUser.email;
+      // debugger;
+      const email = app.auth().currentUser.email;
       const action = '@firebase/auth/EMAIL_VERIFICATION';
       dispatch({type: `${action}_ATTEMPT`, email});
       return new Promise((resolve, reject) => {
