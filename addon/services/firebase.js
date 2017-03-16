@@ -100,6 +100,7 @@ const fb = Ember.Service.extend({
   },
 
   set(path, value, name) {
+    console.log(`setting: ${path}, dispatch of: ${name}`);
     return this._writeToDB('set', path, value, name);
   },
   push(path, value, name) {
@@ -126,6 +127,7 @@ const fb = Ember.Service.extend({
     return new Promise((resolve, reject) => {
       app.database().ref(path)[operation](value)
         .then((result) => {
+          console.log('success:', `${name}/${opName}_SUCCESS`);
           dispatch({type: `${name}/${opName}_SUCCESS`, path, value });
           resolve(result);
         })
