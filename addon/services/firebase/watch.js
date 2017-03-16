@@ -42,10 +42,9 @@ const addWatcher = (dispatch, actionCreator, cb = null) => function addWatcher(s
 };
 
 const listWatcher = (operation, dispatch, actionCreator, cb = null) => function listWatcher(snap) {
-  const opShortName = operation.split('_')[1];
   const payload = {
-    type: `${actionCreator}_${opShortName.toUpperCase()}`,
-    operation: opShortName,
+    type: `${actionCreator}_${operation.toUpperCase()}`,
+    operation,
     key: snap.key,
     data: snap.val(),
   };
