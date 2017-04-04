@@ -22,16 +22,16 @@ const nodeWatcher = (dispatch, actionCreator) => function nodeWatcher(snap) {
   }
 };
 
-const addWatcher = (dispatch, actionCreator, cb = null) => function addWatcher(snap, prevKey) {
-  const payload = {
+const addWatcher = (dispatch, actionCreator, options = {}) => function addWatcher(snap, prevKey) {
+  const payload = Ember.assign(options, {
     type: `${actionCreator}_ADDED`,
     operation: 'added',
     key: snap.key,
     data: snap.val(),
     prevKey
-  };
-  if (cb) {
-    cb(dispatch, payload);
+  });
+  if (options.cb) {
+    options.cb(dispatch, payload);
   }  
 
   if (typeof actionCreator === 'string') {
@@ -41,15 +41,15 @@ const addWatcher = (dispatch, actionCreator, cb = null) => function addWatcher(s
   }
 };
 
-const listWatcher = (operation, dispatch, actionCreator, cb = null) => function listWatcher(snap) {
-  const payload = {
+const listWatcher = (operation, dispatch, actionCreator, options = {}) => function listWatcher(snap) {
+  const payload = Ember.assign(options, {
     type: `${actionCreator}_${operation.toUpperCase()}`,
     operation,
     key: snap.key,
     data: snap.val(),
-  };
-  if (cb) {
-    cb(dispatch, payload);
+  });
+  if (options.cb) {
+    options.cb(dispatch, Ember.assign(options, payload));
   }
 
   if (typeof actionCreator === 'string') {
@@ -89,7 +89,7 @@ const watch = (context) => {
      * 
      * @param {string} path the path reference to state in Firebase
      * @param {mixed} actionCreator either a string "type" for the action or a action-creator function
-     * @param {Object} options query modifiers to the path can optionally be added 
+     * @param {Object} options query modifiers to the path can optionally be added; also can pass additional name/value pairs that will be sent at "event time"
      */
     node(path, actionCreator, options = {}) {
       let reference = addOptionsToReference(context.ref(path), options);
@@ -97,26 +97,26 @@ const watch = (context) => {
       reference.on('value', nodeWatcher(dispatch, actionCreator, options.callback));
 
       const watcher = { path, event: 'value', fn: nodeWatcher(dispatch, actionCreator, options.callback) };
-      dispatch({type: '@firebase/WATCHER_ADD', watcher});
+      dispatch({type: '@firebase/WATCHER_ADD', watcher, options});
       context.addWatcher(watcher);
     },
 
     list(path, actionCreator, options = {}) {
       let reference = addOptionsToReference(context.ref(path), options);
 
-      let fn = listWatcher('added', dispatch, actionCreator);
+      let fn = listWatcher('added', dispatch, actionCreator, options);
       let eventContext = reference.on('child_added', fn);
       let watcher = {path, event: 'child_added', fn, eventContext};
       context.addWatcher(watcher);
-      dispatch({type: '@firebase/WATCHER_ADD', watcher});
+      dispatch({type: '@firebase/WATCHER_ADD', watcher, options});
 
-      fn = listWatcher('removed', dispatch, actionCreator);
+      fn = listWatcher('removed', dispatch, actionCreator, options);
       eventContext = reference.on('child_removed', fn);
       watcher = {path, event: 'child_removed', fn, eventContext};
       context.addWatcher(watcher);
       dispatch({type: '@firebase/WATCHER_ADD', watcher});      
 
-      fn = listWatcher('changed', dispatch, actionCreator);
+      fn = listWatcher('changed', dispatch, actionCreator, options);
       eventContext = reference.on('child_changed', fn);
       watcher = {path, event: 'child_changed', fn, eventContext};
       context.addWatcher(watcher);

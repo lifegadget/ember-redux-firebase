@@ -20,18 +20,20 @@ function onAuthStateChanged(context) {
       Ember.set(context, 'isAuthenticated', user ? true : false);
       Ember.set(context, 'currentUser', user);
       const userProfile = context._currentUserProfile;
-      const ac = (dispatch, firebase, cb = null) => (snap) => {
+      const ac = (dispatch, firebase, options= {}) => (snap) => {
         dispatch({
           type: 'USER_PROFILE_UPDATED',
           key: snap.key,
           data: snap.val()
         });
-        if (cb) {
-          cb(snap);
+        if (options.cb) {
+          options.cb(snap);
         }
       };
       if (user) {
-        context.watch().node(`${userProfile.path}/${user.uid}`, ac(dispatch, context, userProfile.cb));
+        context.watch().node(`${userProfile.path}/${user.uid}`, ac(dispatch, context, {
+          cb: userProfile.cb
+        }));
       }
     },
     (e) => dispatch({type: 'ERROR_DISPATCHING', message: e.message}));
