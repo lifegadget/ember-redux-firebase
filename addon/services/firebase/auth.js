@@ -1,5 +1,5 @@
 import Ember from 'ember';
-const { debug, RSVP: {Promise} } = Ember;
+const { RSVP: {Promise} } = Ember;
 let loggedInUser = null;
 
 const auth = (context, app) => {

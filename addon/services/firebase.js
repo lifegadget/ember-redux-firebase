@@ -111,12 +111,30 @@ const fb = Ember.Service.extend({
   update(path, value, name) {
     return this._writeToDB('update', path, value, name);
   },
+  multipathUpdate(updates, type) {
+    const { redux } = this.getProperties('redux');
+    const { dispatch } = redux;
+    dispatch({type: `${type}@attempt`, updates });
+    return app.database().ref()
+      .update(updates)
+      .then(() => dispatch({
+        type: `${type}@success`,
+        updates
+      }))
+      .catch(e => {
+        dispatch({
+          type: `${type}@failure`,
+          error: e
+        });
+        return Promise.reject(e);
+      });
+  },
 
   _writeToDB(operation, path, value, name) {
     const { redux } = this.getProperties('redux');
     const { dispatch } = redux;
     const opName = operation.toUpperCase();
-    name = `@firebase/${name}`;
+    name = `${name}`;
     // Firebase hates "undefined" values
     if(typeof value === 'object') {
       Object.keys(value).forEach(prop => {
@@ -125,25 +143,24 @@ const fb = Ember.Service.extend({
         }
       });
     }
-    dispatch({type: `${name}/${opName}_ATTEMPT`, path, value });
-    return new Promise((resolve, reject) => {
-      app.database().ref(path)[operation](value)
-        .then((result) => {
-          console.log('success:', `${name}/${opName}_SUCCESS`);
-          dispatch({type: `${name}/${opName}_SUCCESS`, path, value });
-          resolve(result);
-        })
-        .catch(e => {
-          dispatch({
-            type: `${name}/${opName}_FAILURE`, 
-            code: e.code, 
-            message: e.message,
-            path, 
-            value, 
-          });
-          reject(e);
+    dispatch({type: `${name}@attempt`, path, value, opName });
+
+    return app.database().ref(path)[operation](value)
+      .then((result) => {
+        dispatch({type: `${name}@success`, path, value, opName });
+        return Promise.resolve(result);
+      })
+      .catch(e => {
+        dispatch({
+          type: `${name}@failure`, 
+          code: e.code, 
+          message: e.message,
+          path, 
+          value, 
         });
-    });
+        return Promise.reject(e);
+      });
+
   },
 
   /**
@@ -174,8 +191,32 @@ const fb = Ember.Service.extend({
           });
           reject(e);
         });
-
     });
+  },
+
+  /**
+   * Allows you to filter down 
+   */
+  filter(pathOrHash, filter, action) {
+    let start;
+    let firebaseRef;
+    if (typeof pathOrHash === 'string') {
+      firebaseRef = pathOrHash;
+      start = app.database().ref(firebaseRef).once('value');
+    } else {
+      let data;
+      [firebaseRef, data] = pathOrHash;
+      start = Promise.resolve(data);
+    }
+
+    return new Promise((resolve, reject)=> {
+      start
+        .then(input => Promise.resolve(input.filter(filter)))
+        .then(output => app.database().ref(firebaseRef).update(output))
+        .then(resolve)
+        .catch(reject)
+    });
+    
   },
 
   auth() {

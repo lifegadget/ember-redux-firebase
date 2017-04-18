@@ -11,14 +11,17 @@ const { get } = Ember;
  * @param {mixed} actionCreator either a string which names the action type or an action creator function
  */
 const nodeWatcher = (dispatch, actionCreator) => function nodeWatcher(snap) {
+
   if (typeof actionCreator === 'string') {
     dispatch({
       type: actionCreator,
-      key: snap.key,
-      data: snap.val()
+      path: snap.key,
+      value: snap.val()
     });
-  } else {
+  } else if (typeof actionCreator === 'function') {
     actionCreator(snap);
+  } else {
+    Ember.debug(`action type for node-watcher on "${snap.key}" was invalid: ${actionCreator}`);
   }
 };
 
@@ -26,8 +29,8 @@ const addWatcher = (dispatch, actionCreator, options = {}) => function addWatche
   const payload = Ember.assign(options, {
     type: `${actionCreator}_ADDED`,
     operation: 'added',
-    key: snap.key,
-    data: snap.val(),
+    path: snap.key,
+    value: snap.val(),
     prevKey
   });
   if (options.cb) {
@@ -45,8 +48,8 @@ const listWatcher = (operation, dispatch, actionCreator, options = {}) => functi
   const payload = Ember.assign(options, {
     type: `${actionCreator}_${operation.toUpperCase()}`,
     operation,
-    key: snap.key,
-    data: snap.val(),
+    path: snap.key,
+    value: snap.val(),
   });
   if (options.cb) {
     options.cb(dispatch, Ember.assign(options, payload));
@@ -54,8 +57,10 @@ const listWatcher = (operation, dispatch, actionCreator, options = {}) => functi
 
   if (typeof actionCreator === 'string') {
     dispatch(payload);
+  } else if (typeof actionCreator === 'function') {
+    actionCreator(snap);
   } else {
-    actionCreator(payload);
+    Ember.debug(`action type for list watcher on "${snap.key}" was invalid: ${payload.type}`);
   }
 };
 
