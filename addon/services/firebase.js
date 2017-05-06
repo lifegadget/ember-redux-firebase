@@ -2,6 +2,7 @@ import Ember from 'ember';
 import auth from './firebase/auth';
 import watch from './firebase/watch';
 import unwatch from './firebase/unwatch';
+import Services from 'ember-redux-core/utils/services';
 const { get, debug, getOwner, inject: {service}, RSVP: {Promise} } = Ember;
 const DEFAULT_NAME = '[ember-redux-core]';
 export let app;
@@ -76,6 +77,10 @@ const fb = Ember.Service.extend({
   init() {
     const { redux } = this.getProperties('redux');
     this._currentUserProfile = { path: false, setup: c => f => f(c), cleanup: c => f => f(c) };
+
+    // add this service to the Redux service registry so reducers will have access
+    const serviceRegistry = new Services();
+    serviceRegistry.add('firebase', this);
 
     if(!redux) {
       console.error(`Tried to start ember-firebase-redux service but there was no redux service available for dispatch!`);
@@ -251,6 +256,10 @@ const fb = Ember.Service.extend({
     } else {
       watchers.push(watcher);
     }
+  },
+
+  listWatchers() {
+    return watchers.map(w => `${w.event}: ${w.path}`);
   }
 
 });

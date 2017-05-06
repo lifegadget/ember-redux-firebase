@@ -102,7 +102,7 @@ const watch = (context) => {
       reference.on('value', nodeWatcher(dispatch, actionCreator, options.callback));
 
       const watcher = { path, event: 'value', fn: nodeWatcher(dispatch, actionCreator, options.callback) };
-      dispatch({type: '@firebase/WATCHER_ADD', watcher, options});
+      dispatch({type: '@firebase/WATCHER_ADD', watcher, existing: context.listWatchers(), options});
       context.addWatcher(watcher);
     },
 
