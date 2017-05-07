@@ -113,19 +113,19 @@ const watch = (context) => {
       let eventContext = reference.on('child_added', fn);
       let watcher = {path, event: 'child_added', fn, eventContext};
       context.addWatcher(watcher);
-      dispatch({type: '@firebase/WATCHER_ADD', watcher, options});
+      dispatch({type: '@firebase/WATCHER_ADD', watcher, existing: context.listWatchers(), options});
 
       fn = listWatcher('removed', dispatch, actionCreator, options);
       eventContext = reference.on('child_removed', fn);
       watcher = {path, event: 'child_removed', fn, eventContext};
       context.addWatcher(watcher);
-      dispatch({type: '@firebase/WATCHER_ADD', watcher});      
+      dispatch({type: '@firebase/WATCHER_ADD', watcher, existing: context.listWatchers()});      
 
       fn = listWatcher('changed', dispatch, actionCreator, options);
       eventContext = reference.on('child_changed', fn);
       watcher = {path, event: 'child_changed', fn, eventContext};
       context.addWatcher(watcher);
-      dispatch({type: '@firebase/WATCHER_ADD', watcher});
+      dispatch({type: '@firebase/WATCHER_ADD', watcher, existing: context.listWatchers()});
     }
   };
 };
