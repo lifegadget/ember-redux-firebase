@@ -94,7 +94,7 @@ const auth = (context, app) => {
         } else {
           handleError(
             new Error('Attempt to update profile email when not logged in'),
-            reject, action, {email}
+            reject, action, {email} 
           );
         }
       });

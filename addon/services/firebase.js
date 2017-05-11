@@ -106,15 +106,14 @@ const fb = Ember.Service.extend({
     return app.database().ref(refPath);
   },
 
-  set(path, value, name) {
-    console.log(`setting: ${path}, dispatch of: ${name}`);
-    return this._writeToDB('set', path, value, name);
+  set(path, value, name, options = {}) {
+    return this._writeToDB('set', path, value, name, options);
   },
-  push(path, value, name) {
-    return this._writeToDB('push', path, value, name);
+  push(path, value, name, options = {}) {
+    return this._writeToDB('push', path, value, name, options);
   },
-  update(path, value, name) {
-    return this._writeToDB('update', path, value, name);
+  update(path, value, name, options = {}) {
+    return this._writeToDB('update', path, value, name, options);
   },
   multipathUpdate(updates, type) {
     const { redux } = this.getProperties('redux');
@@ -135,7 +134,7 @@ const fb = Ember.Service.extend({
       });
   },
 
-  _writeToDB(operation, path, value, name) {
+  _writeToDB(operation, path, value, name, options) {
     const { redux } = this.getProperties('redux');
     const { dispatch } = redux;
     const opName = operation.toUpperCase();
@@ -148,7 +147,7 @@ const fb = Ember.Service.extend({
         }
       });
     }
-    dispatch({type: `${name}@attempt`, path, value, opName });
+    dispatch(Ember.assign(options, {type: `${name}@attempt`, path, value, opName }));
 
     return app.database().ref(path)[operation](value)
       .then((result) => {
@@ -250,12 +249,9 @@ const fb = Ember.Service.extend({
   isAuthenticated: false,
   currentUser: {},
 
-  addWatcher(watcher, forceDuplicate = false) {
-    if(!forceDuplicate && watcherIsDuplicate(watcher)) {
-      debug(`Attempt to add a duplicate watcher to "${watcher.path}::${watcher.event}". Make sure to unwatch before adding another watcher or set "forceDuplicate" to true.`);
-    } else {
-      watchers.push(watcher);
-    }
+  addWatcher(watcher) {
+    Ember.debug(`adding db watcher:\n${JSON.stringify(watcher, null, 2)}`);
+    watchers.push(watcher);
   },
 
   listWatchers() {
