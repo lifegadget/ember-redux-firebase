@@ -57,19 +57,11 @@ function onConnectedChanged(dispatch, url) {
   });
 }
 
-function watcherIsDuplicate(watcher) {
-  const validator = (accumulator, current) => {
-    return accumulator || (watcher.event === current.event && watcher.path === current.path );
-  };
-  return watchers.reduce(validator, false);
-}
-
 export const Firebase = class {
   clearWatchers() {
     watchers = [];  
   }
 };
-
 
 const fb = Ember.Service.extend({
   redux: service(),
@@ -253,9 +245,16 @@ const fb = Ember.Service.extend({
     Ember.debug(`adding db watcher:\n${JSON.stringify(watcher, null, 2)}`);
     watchers.push(watcher);
   },
-
+  getWatchers() {
+    return watchers.slice(0);
+  },
+  setWatchers(w) {
+    if (Ember.typeOf(w) === 'array') {
+      watchers = w.slice(0);
+    }
+  },
   listWatchers() {
-    return watchers.map(w => `${w.event}: ${w.path}`);
+    return watchers.map(w => `${w.event}: ${w.path} ${JSON.stringify(w.actionCreators.map(ac => typeof ac === 'function' ? 'actionCreator()' : ac))}`);
   }
 
 });

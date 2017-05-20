@@ -35,7 +35,6 @@ const auth = (context, app) => {
     }
   }; 
 
-
   return {
     // AUTH
     emailAndPassword(email, password) {

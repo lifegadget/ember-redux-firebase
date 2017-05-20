@@ -10,19 +10,22 @@ const { get } = Ember;
  * @param {Function} dispatch the redux dispatch function   
  * @param {mixed} actionCreator either a string which names the action type or an action creator function
  */
-const nodeWatcher = (dispatch, actionCreator) => function nodeWatcher(snap) {
+const nodeWatcher = (dispatch, getActionCreators) => function nodeWatcher(snap) {
 
-  if (typeof actionCreator === 'string') {
-    dispatch({
-      type: actionCreator,
-      path: snap.key,
-      value: snap.val()
-    });
-  } else if (typeof actionCreator === 'function') {
-    actionCreator(snap);
-  } else {
-    Ember.debug(`action type for node-watcher on "${snap.key}" was invalid: ${actionCreator}`);
-  }
+  getActionCreators().map(ac => {
+    if (typeof ac === 'string') {
+      dispatch({
+        type: ac,
+        path: snap.key,
+        value: snap.val()
+      });
+    } else if (typeof ac === 'function') {
+      ac(snap);
+    } else {
+      Ember.debug(`action type for node-watcher on "${snap.key}" was invalid: ${ac}`);
+    }
+  })
+
 };
 
 const addWatcher = (dispatch, actionCreator, options = {}) => function addWatcher(snap, prevKey) {
@@ -64,27 +67,67 @@ const listWatcher = (operation, dispatch, actionCreator, options = {}) => functi
   }
 };
 
-const addOptionsToReference = function(reference, options) {
-  if (options.limitToFirst) {
-    reference = reference.limitToFirst(options.limitToFirst);
-  }
-  if (options.limitToLast) {
-    reference = reference.limitToLast(options.limitToLast);
-  }
-  if (options.orderByChild) {
-    reference = reference.orderByChild(options.orderByChild);
-  }
-  if (options.orderByKey) {
-    reference = reference.orderByKey(options.orderByKey);
-  }
-  if (options.orderByValue) {
-    reference = reference.orderByValue(options.orderByValue);
-  }
-  
-  return reference;
-};
-
 const watch = (context) => {
+  /**
+   * Looks through the existing watcher for a match
+   * 
+   * @param {string} event the Firebase listener event type 
+   * @param {string} path path in the DB that this path will be setup
+   */
+  const findWatcher = (event, path) => {
+    const found = context.getWatchers().filter(w => w.path === path && w.event === event);
+    return found.length > 0
+      ? found[0]
+      : false;
+  };
+
+  const addCallbackToWatcher = (event, path, cb) => {
+    dispatch({
+      type: '@firebase/WATCHER_CALLBACK_ADDED', 
+      event, 
+      path,
+      watcher: findWatcher(event, path)
+    });
+
+    context.setWatchers(context.getWatchers().map(w => w.path === path && w.event === event
+      ? w.callbacks.push(cb)
+      : w
+    ));
+  };
+
+  const addActionCreatorToWatcher = (event, path, actionCreator) => {
+    const watcher = findWatcher(event, path);
+    if (watcher) {
+      if(! Ember.A(getActionCreators(event, path)()).includes(actionCreator)) {
+        context.setWatchers(
+          context.getWatchers().map(w => w.path === path && w.event === event 
+            ? Ember.assign({}, w, {actionCreators: w.actionCreators.concat(actionCreator)})
+            : w
+          )
+        );
+        dispatch({
+          type: '@firebase/WATCHER_ACTION_CREATOR_ADDED',
+          path,
+          event,
+          actionCreator,
+          watchers: context.listWatchers()
+        });
+      }
+    }
+  };
+
+  /**
+   * Gets the Action Creators that exist on a given watcher at "event time"
+   * 
+   * @param {string} event Firebase event name
+   * @param {mixed} path database path string (or optionally FB reference)
+   * @returns {array}
+   */
+  const getActionCreators = (event, path) => () => {
+    const watcher = findWatcher(event, path);
+    return watcher.actionCreators;
+  }
+
   const dispatch = get(context, 'redux').dispatch;
   return {
     /**
@@ -92,22 +135,57 @@ const watch = (context) => {
      * 
      * Allows containers to add a watcher to a DB ref which will listen to Firebase "value events"
      * 
-     * @param {string} path the path reference to state in Firebase
+     * @param {mixed} pathOrRef a string path reference in DB or a Firebase ref object
      * @param {mixed} actionCreator either a string "type" for the action or a action-creator function
      * @param {Object} options query modifiers to the path can optionally be added; also can pass additional name/value pairs that will be sent at "event time"
      */
-    node(path, actionCreator, options = {}) {
-      let reference = addOptionsToReference(context.ref(path), options);
+    node(pathOrRef, actionCreator, options = {}) {
+      let ref;
+      let path;
+      if (Ember.typeOf(pathOrRef) === 'string') {
+        ref = context.ref(pathOrRef);
+        path = pathOrRef;
+      } else {
+        ref = pathOrRef;
+        path = '(reference)';
+      }
+      console.info(`Node watcher being considered for ${path}`);
+      // If event/path already exist, then only thing to try 
+      // is add a callback or new actionType
+      if(findWatcher('value', pathOrRef)) {
+        Ember.debug(`Duplicate watcher being considered: ['value', ${path}]`);
+        console.info(findWatcher('value', pathOrRef));
+        if (options.callback) {
+          console.info(`An additional callback being added for ${path}`);
+          addCallbackToWatcher('value', pathOrRef, options.callback);
+        }
+        addActionCreatorToWatcher('value', path, actionCreator);
+      }
+      // this is a new event
+      else {
+        ref.on('value', 
+          nodeWatcher(dispatch, getActionCreators('value', path).bind(this), options.callback)
+        );
 
-      reference.on('value', nodeWatcher(dispatch, actionCreator, options.callback));
-
-      const watcher = { path, event: 'value', fn: nodeWatcher(dispatch, actionCreator, options.callback) };
-      dispatch({type: '@firebase/WATCHER_ADD', watcher, existing: context.listWatchers(), options});
-      context.addWatcher(watcher);
+        const watcher = { 
+          path, 
+          event: 'value',
+          actionCreators: [actionCreator],
+          callbacks: options.callback ? [options.callback] : [],
+          fn: nodeWatcher(dispatch, getActionCreators('value', path).bind(this), options.callback) 
+        };
+        dispatch({
+          type: '@firebase/WATCHER_ADD', 
+          watcher, 
+          existing: context.listWatchers(), options
+        });
+        context.addWatcher(watcher);
+      }
     },
 
     list(path, actionCreator, options = {}) {
-      let reference = addOptionsToReference(context.ref(path), options);
+      // let reference = addOptionsToReference(context.ref(path), options);
+      let reference = context.ref(path);
 
       let fn = listWatcher('added', dispatch, actionCreator, options);
       let eventContext = reference.on('child_added', fn);
