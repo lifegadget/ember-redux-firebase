@@ -9,6 +9,7 @@ const auth = (context, app) => {
   const handleSuccess = (resolve, type, params = {}) => {
     const payload = Ember.assign({}, params, {
       type: `${type}_SUCCESS`, 
+      firebase: context
     });
     dispatch(payload);
     resolve(payload);
@@ -17,6 +18,7 @@ const auth = (context, app) => {
     dispatch(Ember.assign({}, params, {
       type: `${type}_FAILURE`, 
       code: err.code || 'not-specified', 
+      firebase: context,
       message: err.message || err
     }));
     reject(err);
@@ -50,6 +52,7 @@ const auth = (context, app) => {
             loggedInUser = user.uid;
             redux.dispatch({
               type: '@firebase/auth/SUCCESS',
+              firebase: context,
               user
             });
             resolve(user);
@@ -59,6 +62,7 @@ const auth = (context, app) => {
               type: '@firebase/auth/FAILURE',
               code: e.code,
               message: e.message,
+              firebase: context,
               email
             });
             reject(e);
@@ -120,14 +124,9 @@ const auth = (context, app) => {
 
       });
     },
-    signOut(message = '') {
-      const { redux } = context.getProperties('redux');
-      redux.dispatch({
-        type: '@firebase/auth/SIGN_OUT',
-        uid: loggedInUser,
-        message
-      });
+    signOut() {
       loggedInUser = null;
+      // this will trigger dispatch of LOGGED_OUT
       return app.auth().signOut();
     },
     /**

@@ -10,34 +10,33 @@ export let watchers = [];
 
 /**
  * start listening for Auth State changes and dispatch
- * events when they occur
+ * events when they occur. Because there are async side-effects
+ * needed this feature relies on a "thunk" middleware to be 
+ * present.
  */
-function onAuthStateChanged(context) {
-  const dispatch = context.get('redux.dispatch');
+function onAuthStateChanged(dispatch, context) {
   app.auth().onAuthStateChanged(
     (user) => {
-      const actionType = user ? 'CURRENT_USER_CHANGED' : 'SIGN_OUT';
-      dispatch({type: `@firebase/auth/${actionType}`, user});
+      let actionType;
+      let callback;
+      if (user) {
+        actionType = 'LOGGED_IN';
+        callback = () => context.watch().loggedIn(user);
+      } else {
+        actionType = 'LOGGED_OUT';
+        callback = () => context.unwatch().loggedOut();
+      }
+      dispatch({
+        type: `@firebase/auth/${actionType}`, 
+        user,
+        firebase: context
+      });
       Ember.set(context, 'isAuthenticated', user ? true : false);
       Ember.set(context, 'currentUser', user);
-      const userProfile = context._currentUserProfile;
-      const ac = (dispatch, firebase, options= {}) => (snap) => {
-        dispatch({
-          type: 'USER_PROFILE_UPDATED',
-          key: snap.key,
-          data: snap.val()
-        });
-        if (options.cb) {
-          options.cb(snap);
-        }
-      };
-      if (user) {
-        context.watch().node(`${userProfile.path}/${user.uid}`, ac(dispatch, context, {
-          cb: userProfile.cb
-        }));
-      }
+      callback();
     },
-    (e) => dispatch({type: 'ERROR_DISPATCHING', message: e.message}));
+    (e) => dispatch({type: '@firebase/GENERAL_ERROR', message: e.message})
+  );
 }
 
 function onConnectedChanged(dispatch, url) {
@@ -68,8 +67,6 @@ const fb = Ember.Service.extend({
 
   init() {
     const { redux } = this.getProperties('redux');
-    this._currentUserProfile = { path: false, setup: c => f => f(c), cleanup: c => f => f(c) };
-
     // add this service to the Redux service registry so reducers will have access
     const serviceRegistry = new Services();
     serviceRegistry.add('firebase', this);
@@ -90,7 +87,7 @@ const fb = Ember.Service.extend({
       url: config.firebase.databaseURL,
       appName: modulePrefix || DEFAULT_NAME
     });
-    onAuthStateChanged(this);
+    onAuthStateChanged(redux.dispatch, this);
     onConnectedChanged(redux.dispatch, config.firebase.databaseURL);
   },
 
@@ -220,24 +217,49 @@ const fb = Ember.Service.extend({
   },
 
   watch() {
-    return watch(this);
+    return watch(this, get(this, 'redux'));
+  },
+
+  onLogin(fn) {
+    return this.watch().onLogin(fn);
   },
 
   unwatch() {
-    return unwatch(this, watchers);
+    return unwatch(this, get(this, 'redux'));
+  },
+
+  onLogout(fn) {
+    return this.unwatch().onLogout(fn);
   },
 
   watching() {
     return watchers;
   },
 
-  currentUserProfile(path = undefined, cb = undefined) {
-    if (path === undefined) {
-      path = '/users';
-    } 
-    this._currentUserProfile = { path, cb };
-    debug(`User Profile path set to: ${this._currentUserProfile.path}`); 
+  /**
+   * Allows the container to resolve the app-specific "user-profile"
+   * as a promise based function based on an authenticated firebase user;
+   * this function will be executed on the LOGGED_IN lifecycle event
+   * 
+   * @param {Function(user):Promise<object>} fn 
+   */
+  findUserProfile(fn) {
+    this._findUserProfile = fn;
+    return this;
   },
+
+  /**
+   * Allows the container to resolve the app-specific "organisation"
+   * as a promise based function based on an authenticated firebase user;
+   * this function will be executed on the LOGGED_IN lifecycle event
+   * 
+   * @param {Function(user, userProfile):Promise<object>} fn 
+   */
+  findUserOrganization(fn) {
+    this._findUserOrganization = fn;
+    return this;
+  },
+
   isAuthenticated: false,
   currentUser: {},
 

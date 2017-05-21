@@ -10,6 +10,7 @@ const reducer = (state, action) => {
       return state.merge({currentUser: action.user});
       
     case '@firebase/auth/SUCCESS':
+      // action.firebase.watch().loggedIn(action.user);
       return state
         .merge({
           isAuthenticated: true,
@@ -18,8 +19,13 @@ const reducer = (state, action) => {
         .delete('code')
         .delete('message');
 
-    case '@firebase/auth/SIGN_OUT':
+    case '@firebase/auth/LOGGED_IN':
+      // action.firebase.watch().loggedIn(action.user);
+      return state;
+
+    case '@firebase/auth/LOGGED_OUT':
     case '@firebase/auth/FAILURE':
+      action.firebase.unwatch().loggedOut();
       return state.merge({
         isAuthenticated: false,
         currentUser: null,

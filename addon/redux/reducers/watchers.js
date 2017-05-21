@@ -8,12 +8,10 @@ const reducer = (state, action) => {
   switch(action.type) {
 
     case '@firebase/WATCHER_ADD':
+      action.firebase.addWatcher(action.watcher);
       return state.push(action.watcher);
 
     case '@firebase/WATCHER_REMOVE':
-      return defaultState;
-
-    case '@firebase/auth/SIGN_OUT':
       return defaultState;
 
 

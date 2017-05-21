@@ -1,5 +1,5 @@
 import Ember from 'ember';
-const { get } = Ember;
+const { get, RSVP: {Promise} } = Ember;
 
 /**
  * nodeWatcher
@@ -7,7 +7,7 @@ const { get } = Ember;
  * Watches for "value" events at a particular path in the database. Is meant for leaf nodes
  * in the database or non-list based paths.
  * 
- * @param {Function} dispatch the redux dispatch function   
+ * @param {function} dispatch the redux dispatch function   
  * @param {mixed} actionCreator either a string which names the action type or an action creator function
  */
 const nodeWatcher = (dispatch, getActionCreators) => function nodeWatcher(snap) {
@@ -28,46 +28,16 @@ const nodeWatcher = (dispatch, getActionCreators) => function nodeWatcher(snap) 
 
 };
 
-const addWatcher = (dispatch, actionCreator, options = {}) => function addWatcher(snap, prevKey) {
-  const payload = Ember.assign(options, {
-    type: `${actionCreator}_ADDED`,
-    operation: 'added',
-    path: snap.key,
-    value: snap.val(),
-    prevKey
-  });
-  if (options.cb) {
-    options.cb(dispatch, payload);
-  }  
+let loginCallbacks = [];
 
-  if (typeof actionCreator === 'string') {
-    dispatch(payload);
-  } else {
-    actionCreator(payload);
-  }
-};
-
-const listWatcher = (operation, dispatch, actionCreator, options = {}) => function listWatcher(snap) {
-  const payload = Ember.assign(options, {
-    type: `${actionCreator}_${operation.toUpperCase()}`,
-    operation,
-    path: snap.key,
-    value: snap.val(),
-  });
-  if (options.cb) {
-    options.cb(dispatch, Ember.assign(options, payload));
-  }
-
-  if (typeof actionCreator === 'string') {
-    dispatch(payload);
-  } else if (typeof actionCreator === 'function') {
-    actionCreator(snap);
-  } else {
-    Ember.debug(`action type for list watcher on "${snap.key}" was invalid: ${payload.type}`);
-  }
-};
-
+/**
+ * Watcher Interface
+ * 
+ * @param {object} context Firebase Service
+ * @param {function} dispatch Redux dispatch
+ */
 const watch = (context) => {
+  const dispatch = get(context, 'redux.dispatch');
   /**
    * Looks through the existing watcher for a match
    * 
@@ -128,8 +98,72 @@ const watch = (context) => {
     return watcher.actionCreators;
   }
 
-  const dispatch = get(context, 'redux').dispatch;
   return {
+    /**
+     * Allows containers to state which watchers should be removed
+     * at the LOG_OUT lifecycle event.
+     * 
+     * @param {Function} cb callback function to be executed at login
+     */
+    onLogin(cb) {
+      const higherOrder = (meta) => cb(this, meta);
+      loginCallbacks = loginCallbacks.concat(higherOrder);
+      return context;
+    },
+
+    /**
+     * Executed by addon's AUTH reducer when a user logs in,
+     * does two things:
+     * 
+     *  a) prep userProfile and Organisation
+     *  b) call registered callbacks with above context
+     */
+    loggedIn(user) {
+      const meta = { user, userProfile: {}, organization: {} };
+      const prep = context._findUserProfile 
+        ? () => context._findUserProfile(user)
+                  .then(userProfile => {
+                    meta.userProfile = userProfile;
+                    return context._findUserOrganization
+                      ? context._findUserOrganization(user, userProfile)
+                      : Promise.resolve({});
+                  })
+                  .then(organization => {
+                    meta.organization = organization;
+                    return Promise.resolve();
+                  })
+        : () => Promise.resolve();
+      const processCallbacks = () => {
+        loginCallbacks.forEach(cb => cb(meta));
+      };
+      if (loginCallbacks.length === 0) {
+        return;
+      }
+
+      dispatch({
+        type: '@firebase/auth/LOGIN_CALLBACKS@attempt`',
+        user,
+        registeredCallbacks: loginCallbacks.length
+      });
+
+      return prep()
+        .then(() => processCallbacks(user, meta.userProfile, meta.organization))
+        .then(() => dispatch({
+          type: '@firebase/auth/LOGIN_CALLBACKS@success`',
+          user,
+          userProfile: meta.userProfile,
+          organization: meta.organization,
+          registeredCallbacks: loginCallbacks.length
+        }))
+        .catch((e) => {
+          Ember.debug('Problem with login callbacks:\n' + JSON.stringify(e, null, 2));
+          dispatch({
+            type: '@firebase/auth/LOGIN_CALLBACKS@failure',
+            error: e
+          })
+        });
+    },
+
     /**
      * node
      * 
@@ -149,14 +183,11 @@ const watch = (context) => {
         ref = pathOrRef;
         path = '(reference)';
       }
-      console.info(`Node watcher being considered for ${path}`);
       // If event/path already exist, then only thing to try 
       // is add a callback or new actionType
       if(findWatcher('value', pathOrRef)) {
         Ember.debug(`Duplicate watcher being considered: ['value', ${path}]`);
-        console.info(findWatcher('value', pathOrRef));
         if (options.callback) {
-          console.info(`An additional callback being added for ${path}`);
           addCallbackToWatcher('value', pathOrRef, options.callback);
         }
         addActionCreatorToWatcher('value', path, actionCreator);
@@ -172,14 +203,15 @@ const watch = (context) => {
           event: 'value',
           actionCreators: [actionCreator],
           callbacks: options.callback ? [options.callback] : [],
-          fn: nodeWatcher(dispatch, getActionCreators('value', path).bind(this), options.callback) 
         };
         dispatch({
           type: '@firebase/WATCHER_ADD', 
           watcher, 
-          existing: context.listWatchers(), options
+          existing: context.listWatchers(), 
+          options,
+          firebase: context
         });
-        context.addWatcher(watcher);
+        
       }
     },
 
