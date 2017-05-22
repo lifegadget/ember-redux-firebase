@@ -7,9 +7,15 @@ const unwatch = (context) => {
 
   return {
     all() {
-      context.getWatchers().forEach(watcher => {
+      const watchers = context.getWatchers();
+      const list = context.listWatchers();
+      watchers.forEach(watcher => {
         context.ref(watcher.path).off(watcher.event);
       });
+      dispatch({
+        type: '@firebase/watch/REMOVE_ALL',
+        removed: list
+      })
       context.setWatchers([]);
     },
 

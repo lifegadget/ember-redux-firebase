@@ -11,11 +11,11 @@ const { get, RSVP: {Promise} } = Ember;
  * @param {mixed} actionCreator either a string which names the action type or an action creator function
  */
 const nodeWatcher = (dispatch, getActionCreators) => function nodeWatcher(snap) {
-
-  getActionCreators().map(ac => {
+  const actions = getActionCreators() || [];
+  actions.map(ac => {
     if (typeof ac === 'string') {
       dispatch({
-        type: ac,
+        type: `${ac}@observed`,
         path: snap.key,
         value: snap.val()
       });
@@ -25,7 +25,6 @@ const nodeWatcher = (dispatch, getActionCreators) => function nodeWatcher(snap) 
       Ember.debug(`action type for node-watcher on "${snap.key}" was invalid: ${ac}`);
     }
   })
-
 };
 
 let loginCallbacks = [];
@@ -53,7 +52,7 @@ const watch = (context) => {
 
   const addCallbackToWatcher = (event, path, cb) => {
     dispatch({
-      type: '@firebase/WATCHER_CALLBACK_ADDED', 
+      type: '@firebase/watch/CALLBACK_ADDED', 
       event, 
       path,
       watcher: findWatcher(event, path)
@@ -76,7 +75,7 @@ const watch = (context) => {
           )
         );
         dispatch({
-          type: '@firebase/WATCHER_ACTION_CREATOR_ADDED',
+          type: '@firebase/watch/ACTION_CREATOR_ADDED',
           path,
           event,
           actionCreator,
@@ -205,7 +204,7 @@ const watch = (context) => {
           callbacks: options.callback ? [options.callback] : [],
         };
         dispatch({
-          type: '@firebase/WATCHER_ADD', 
+          type: '@firebase/watch/ADD', 
           watcher, 
           existing: context.listWatchers(), 
           options,

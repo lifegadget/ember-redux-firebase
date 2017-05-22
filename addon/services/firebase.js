@@ -264,19 +264,20 @@ const fb = Ember.Service.extend({
   currentUser: {},
 
   addWatcher(watcher) {
-    Ember.debug(`adding db watcher:\n${JSON.stringify(watcher, null, 2)}`);
-    watchers.push(watcher);
+    watchers = watchers.concat(watcher);
   },
   getWatchers() {
     return watchers.slice(0);
   },
   setWatchers(w) {
+    console.log('setting watchers', w.length);
     if (Ember.typeOf(w) === 'array') {
       watchers = w.slice(0);
     }
   },
   listWatchers() {
-    return watchers.map(w => `${w.event}: ${w.path} ${JSON.stringify(w.actionCreators.map(ac => typeof ac === 'function' ? 'actionCreator()' : ac))}`);
+    const list = watchers || [];
+    return list.map(w => `${w.event}: ${w.path} ${JSON.stringify(w.actionCreators.map(ac => typeof ac === 'function' ? 'actionCreator()' : ac))}`);
   }
 
 });
